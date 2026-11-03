@@ -213,3 +213,23 @@ Phase B already plans n ≥ 100 for key cells.
 - `scripts/make_synthetic_data.py` produces a full *_SYNTHETIC data set (random Dirichlet
   outcome probabilities per cell, a deliberately noisy SYNTHETIC interpreter) only to exercise
   the analysis code; `report.py` stamps every figure "SYNTHETIC".
+
+## D8. LIBERO-Goal (Phase 7)
+
+- **Checkpoint.** `lerobot/smolvla_libero` exists on the Hub (also `HuggingFaceVLA/smolvla_libero`),
+  fine-tuned from `lerobot/smolvla_base` on `lerobot/libero`. Its `train_config.json` gives the
+  camera `rename_map` (`observation.images.image -> camera1`, `image2 -> camera2`), used as is.
+  Its success on LIBERO-Goal was **not** verified here (nothing was run). If it turns out not to
+  cover LIBERO-Goal well, fine-tune with `scripts/train_policy.py` on `lerobot/libero`.
+- **English source.** LIBERO's `task.language` (what LeRobot passes as `task_description`) is the
+  BDDL *file name* with spaces, e.g. "open the middle drawer of the cabinet", which differs from
+  the `(:language ...)` line inside the BDDL ("Open the middle layer of the drawer"). We
+  translate the former; the evaluator asserts that the env's text matches before running.
+- Languages: es (Mexican Spanish), pt (Brazilian), fr, de. LLM drafts, `llm_draft_needs_review`.
+- S1/S2 in LIBERO need an interpreter prompted with the 10 LIBERO instructions
+  (`hf:<model>`); `oracle` returns the true English instruction and is only an upper bound /
+  pipeline check, not a system.
+- IMG in LIBERO: actions are relative end-effector commands, so phi = summed xyz command over
+  the chunk + final gripper (no FK); the gate runs only at t = 0 in simulation.
+- `bash scripts/gpu_libero.sh` installs and runs everything on a Linux GPU; it exits without a
+  GPU. LIBERO / robosuite are Linux-only, so the `sim` extra is marked `sys_platform == 'linux'`.

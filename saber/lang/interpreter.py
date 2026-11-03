@@ -139,8 +139,10 @@ class HFInterpreter:
         snap: bool = False,
         model: Any = None,
         tokenizer: Any = None,
+        prompt: str = PROMPT,
     ):
         self.name = f"hf:{model_id}"
+        self.prompt = prompt
         self.temperature = temperature
         self.max_new_tokens = max_new_tokens
         self.uniform = uniform_weights
@@ -160,7 +162,7 @@ class HFInterpreter:
         names = ", ".join(
             PHASE_A_OBJECTS[o].en if o in PHASE_A_OBJECTS else o.replace("_", " ") for o in visible
         )
-        text = PROMPT.format(objects=names, utterance=utterance)
+        text = self.prompt.replace("{objects}", names).replace("{utterance}", utterance)
         if getattr(self.tok, "chat_template", None):
             return self.tok.apply_chat_template(
                 [{"role": "user", "content": text}], tokenize=False, add_generation_prompt=True

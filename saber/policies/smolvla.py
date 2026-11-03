@@ -57,40 +57,7 @@ class SmolVLAChunkPolicy:
         return self.pre(obs)
 
     def _sample_shared_prefix(self, batch: dict[str, Any], n: int):
-        torch = self.torch
-        from lerobot.policies.smolvla.modeling_smolvla import make_att_2d_masks
-        from lerobot.utils.constants import OBS_LANGUAGE_ATTENTION_MASK, OBS_LANGUAGE_TOKENS
-
-        pol, model = self.policy, self.policy.model
-        images, img_masks = pol.prepare_images(batch)
-        state = pol.prepare_state(batch)
-        prefix_embs, prefix_pad, prefix_att = model.embed_prefix(
-            images, img_masks, batch[OBS_LANGUAGE_TOKENS], batch[OBS_LANGUAGE_ATTENTION_MASK], state=state
-        )
-        att_2d = make_att_2d_masks(prefix_pad, prefix_att)
-        pos = torch.cumsum(prefix_pad, dim=1) - 1
-        outs, pkv = model.vlm_with_expert.forward(
-            attention_mask=att_2d,
-            position_ids=pos,
-            past_key_values=None,
-            inputs_embeds=[prefix_embs, None],
-            use_cache=True,
-            fill_kv_cache=True,
-        )
-        # pooled prefix hidden state (mean over valid tokens) for G-int
-        h = outs[0]
-        m = prefix_pad[..., None].to(h.dtype)
-        hidden = (h * m).sum(1) / m.sum(1).clamp(min=1)
-        pkv = {layer: {k: v.expand(n, *v.shape[1:]) for k, v in kv.items()} for layer, kv in pkv.items()}
-        pad_n = prefix_pad.expand(n, -1)
-        cfg = model.config
-        x_t = model.sample_noise((n, cfg.chunk_size, cfg.max_action_dim), self.device)
-        dt = -1.0 / cfg.num_steps
-        for step in range(cfg.num_steps):
-            t = torch.tensor(1.0 + step * dt, dtype=torch.float32, device=self.device).expand(n)
-            v_t = model.denoise_step(prefix_pad_masks=pad_n, past_key_values=pkv, x_t=x_t, timestep=t)
-            x_t = x_t + dt * v_t
-        return x_t, hidden[0], {"prefix_passes": 1, "expert_passes": cfg.num_steps}
+        return sample_shared_prefix(self.policy, batch, n, self.device)
 
     def sample_chunks(
         self,
@@ -122,3 +89,45 @@ class SmolVLAChunkPolicy:
         chunks = actions.float().cpu().numpy()
         h = hidden.float().cpu().numpy() if hidden is not None else None
         return PolicySample(chunks, time.perf_counter() - t0, h, cost)
+
+
+def sample_shared_prefix(policy: Any, batch: dict[str, Any], n: int, device: Any):
+    """S = ``n`` flow samples from one prefix pass of a lerobot 0.4.4 ``SmolVLAPolicy``.
+
+    ``batch`` is the output of the policy preprocessor (normalized state, tokenized task).
+    Returns (normalized actions (n, chunk, max_action_dim), pooled prefix hidden state, cost).
+    """
+    import torch
+    from lerobot.policies.smolvla.modeling_smolvla import make_att_2d_masks
+    from lerobot.utils.constants import OBS_LANGUAGE_ATTENTION_MASK, OBS_LANGUAGE_TOKENS
+
+    model = policy.model
+    images, img_masks = policy.prepare_images(batch)
+    state = policy.prepare_state(batch)
+    prefix_embs, prefix_pad, prefix_att = model.embed_prefix(
+        images, img_masks, batch[OBS_LANGUAGE_TOKENS], batch[OBS_LANGUAGE_ATTENTION_MASK], state=state
+    )
+    att_2d = make_att_2d_masks(prefix_pad, prefix_att)
+    pos = torch.cumsum(prefix_pad, dim=1) - 1
+    outs, pkv = model.vlm_with_expert.forward(
+        attention_mask=att_2d,
+        position_ids=pos,
+        past_key_values=None,
+        inputs_embeds=[prefix_embs, None],
+        use_cache=True,
+        fill_kv_cache=True,
+    )
+    # pooled prefix hidden state (mean over valid tokens) for G-int
+    h = outs[0]
+    m = prefix_pad[..., None].to(h.dtype)
+    hidden = (h * m).sum(1) / m.sum(1).clamp(min=1)
+    pkv = {layer: {k: v.expand(n, *v.shape[1:]) for k, v in kv.items()} for layer, kv in pkv.items()}
+    pad_n = prefix_pad.expand(n, -1)
+    cfg = model.config
+    x_t = model.sample_noise((n, cfg.chunk_size, cfg.max_action_dim), device)
+    dt = -1.0 / cfg.num_steps
+    for step in range(cfg.num_steps):
+        t = torch.tensor(1.0 + step * dt, dtype=torch.float32, device=device).expand(n)
+        v_t = model.denoise_step(prefix_pad_masks=pad_n, past_key_values=pkv, x_t=x_t, timestep=t)
+        x_t = x_t + dt * v_t
+    return x_t, hidden[0], {"prefix_passes": 1, "expert_passes": cfg.num_steps}

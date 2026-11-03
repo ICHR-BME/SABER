@@ -1,0 +1,73 @@
+# LIBERO-Goal instructions and translations.
+#
+# English source = LIBERO's `task.language`, which LIBERO derives from the BDDL *file name*
+# (benchmark/__init__.py: grab_language_from_filename) and which LeRobot passes to the policy as
+# `task_description`. NOTE: it differs from the `(:language ...)` line inside each BDDL file
+# (e.g. "Open the middle layer of the drawer"); we translate what the policy actually receives.
+# Source: github.com/Lifelong-Robot-Learning/LIBERO @ 8f1084e3132a (libero_suite_task_map.py).
+#
+# Translations: LLM drafts (claude-opus-5-5, 2026-11-03). ALL PENDING human review by native
+# speakers. es = Mexican Spanish.
+status: llm_draft_needs_review
+languages: [es, pt, fr, de]
+tasks:
+  - id: 0
+    en: open the middle drawer of the cabinet
+    es: abre el cajón de en medio del gabinete
+    pt: abra a gaveta do meio do armário
+    fr: ouvre le tiroir du milieu du meuble
+    de: öffne die mittlere Schublade des Schranks
+  - id: 1
+    en: put the bowl on the stove
+    es: pon el tazón sobre la estufa
+    pt: coloque a tigela no fogão
+    fr: mets le bol sur la cuisinière
+    de: stell die Schüssel auf den Herd
+  - id: 2
+    en: put the wine bottle on top of the cabinet
+    es: pon la botella de vino encima del gabinete
+    pt: coloque a garrafa de vinho em cima do armário
+    fr: mets la bouteille de vin sur le dessus du meuble
+    de: stell die Weinflasche oben auf den Schrank
+  - id: 3
+    en: open the top drawer and put the bowl inside
+    es: abre el cajón de arriba y mete el tazón
+    pt: abra a gaveta de cima e coloque a tigela dentro
+    fr: ouvre le tiroir du haut et mets le bol dedans
+    de: öffne die obere Schublade und leg die Schüssel hinein
+  - id: 4
+    en: put the bowl on top of the cabinet
+    es: pon el tazón encima del gabinete
+    pt: coloque a tigela em cima do armário
+    fr: mets le bol sur le dessus du meuble
+    de: stell die Schüssel oben auf den Schrank
+  - id: 5
+    en: push the plate to the front of the stove
+    es: empuja el plato hacia el frente de la estufa
+    pt: empurre o prato para a frente do fogão
+    fr: pousse l'assiette vers l'avant de la cuisinière
+    de: schieb den Teller vor den Herd
+  - id: 6
+    en: put the cream cheese in the bowl
+    es: pon el queso crema en el tazón
+    pt: coloque o cream cheese na tigela
+    fr: mets le fromage à la crème dans le bol
+    de: leg den Frischkäse in die Schüssel
+  - id: 7
+    en: turn on the stove
+    es: prende la estufa
+    pt: ligue o fogão
+    fr: allume la cuisinière
+    de: schalte den Herd ein
+  - id: 8
+    en: put the bowl on the plate
+    es: pon el tazón sobre el plato
+    pt: coloque a tigela no prato
+    fr: mets le bol sur l'assiette
+    de: stell die Schüssel auf den Teller
+  - id: 9
+    en: put the wine bottle on the rack
+    es: pon la botella de vino en la rejilla
+    pt: coloque a garrafa de vinho no suporte
+    fr: mets la bouteille de vin sur le support
+    de: stell die Weinflasche auf das Gestell
