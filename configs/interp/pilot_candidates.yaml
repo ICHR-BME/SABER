@@ -1,0 +1,17 @@
+# Interpreter candidates for the 200-utterance pilot (PROPUESTA 2.2.1). Existence of each repo
+# on the Hugging Face Hub was checked on 2026-11-03; quality is NOT known: that is what the pilot
+# measures. Gated repos need the license accepted on the Hub and `hf auth login`.
+k: 5
+temperature: 0.7
+candidates:
+  - backend: rule              # deterministic lexicon baseline (no model)
+  - backend: hf
+    model_id: Qwen/Qwen2.5-1.5B-Instruct
+  - backend: hf
+    model_id: Qwen/Qwen3-1.7B
+  - backend: hf
+    model_id: HuggingFaceTB/SmolLM3-3B
+  - backend: hf
+    model_id: google/gemma-3-1b-it          # gated
+  - backend: hf
+    model_id: meta-llama/Llama-3.2-1B-Instruct   # gated

@@ -1,0 +1,1070 @@
+# Phase A command bank. ALL ENTRIES ARE DRAFTS (status: draft_needs_native_review).
+# Do not mark entries final without the native-speaker review. Generated once by an LLM.
+bank: phase_a
+version: 1
+drafted_by: claude-opus-5-5 (LLM draft, 2026-11-03)
+review: 'PENDING: two native Mexican Spanish speakers must review every entry (HANDOFF 6.3)'
+objects:
+- screwdriver
+- pliers
+- wrench
+conditions:
+  E0:
+    name: canonical English
+    expected: execute
+    note: exactly the training instruction; one per object by definition
+  E1:
+    name: English paraphrase
+    expected: execute
+  S1:
+    name: formal Spanish
+    expected: execute
+  S2:
+    name: colloquial Mexican Spanish
+    expected: execute
+  S3:
+    name: Spanglish
+    expected: execute
+  A1:
+    name: ambiguous referent (pliers + precision pliers visible)
+    expected: abstain_and_ask
+  O1:
+    name: absent object
+    expected: abstain
+voice_conditions_note: V1 and V2 are S2 utterances spoken and transcribed; they are recorded, not written here.
+utterances:
+- id: E0-screwdriver-01
+  condition: E0
+  target: screwdriver
+  text: Pick up the screwdriver and put it in the tray
+  status: draft_needs_native_review
+- id: E0-pliers-01
+  condition: E0
+  target: pliers
+  text: Pick up the pliers and put them in the tray
+  status: draft_needs_native_review
+- id: E0-wrench-01
+  condition: E0
+  target: wrench
+  text: Pick up the wrench and put it in the tray
+  status: draft_needs_native_review
+- id: E1-screwdriver-01
+  condition: E1
+  target: screwdriver
+  text: Grab the screwdriver and drop it in the tray
+  status: draft_needs_native_review
+- id: E1-screwdriver-02
+  condition: E1
+  target: screwdriver
+  text: Put the screwdriver into the tray
+  status: draft_needs_native_review
+- id: E1-screwdriver-03
+  condition: E1
+  target: screwdriver
+  text: Could you move the screwdriver to the tray?
+  status: draft_needs_native_review
+- id: E1-screwdriver-04
+  condition: E1
+  target: screwdriver
+  text: Take the screwdriver and place it in the tray
+  status: draft_needs_native_review
+- id: E1-screwdriver-05
+  condition: E1
+  target: screwdriver
+  text: Pick the screwdriver up and set it in the tray
+  status: draft_needs_native_review
+- id: E1-screwdriver-06
+  condition: E1
+  target: screwdriver
+  text: I need the screwdriver in the tray
+  status: draft_needs_native_review
+- id: E1-screwdriver-07
+  condition: E1
+  target: screwdriver
+  text: Please get the screwdriver and put it into the tray
+  status: draft_needs_native_review
+- id: E1-screwdriver-08
+  condition: E1
+  target: screwdriver
+  text: Move the screwdriver over to the tray
+  status: draft_needs_native_review
+- id: E1-screwdriver-09
+  condition: E1
+  target: screwdriver
+  text: Hand me the screwdriver, put it in the tray
+  status: draft_needs_native_review
+- id: E1-screwdriver-10
+  condition: E1
+  target: screwdriver
+  text: Lift the screwdriver and leave it in the tray
+  status: draft_needs_native_review
+- id: E1-pliers-01
+  condition: E1
+  target: pliers
+  text: Grab the pliers and drop them in the tray
+  status: draft_needs_native_review
+- id: E1-pliers-02
+  condition: E1
+  target: pliers
+  text: Put the pliers into the tray
+  status: draft_needs_native_review
+- id: E1-pliers-03
+  condition: E1
+  target: pliers
+  text: Could you move the pliers to the tray?
+  status: draft_needs_native_review
+- id: E1-pliers-04
+  condition: E1
+  target: pliers
+  text: Take the pliers and place them in the tray
+  status: draft_needs_native_review
+- id: E1-pliers-05
+  condition: E1
+  target: pliers
+  text: Pick the pliers up and set them in the tray
+  status: draft_needs_native_review
+- id: E1-pliers-06
+  condition: E1
+  target: pliers
+  text: I need the pliers in the tray
+  status: draft_needs_native_review
+- id: E1-pliers-07
+  condition: E1
+  target: pliers
+  text: Please get the pliers and put them into the tray
+  status: draft_needs_native_review
+- id: E1-pliers-08
+  condition: E1
+  target: pliers
+  text: Move the pliers over to the tray
+  status: draft_needs_native_review
+- id: E1-pliers-09
+  condition: E1
+  target: pliers
+  text: Hand me the pliers, put them in the tray
+  status: draft_needs_native_review
+- id: E1-pliers-10
+  condition: E1
+  target: pliers
+  text: Lift the pliers and leave them in the tray
+  status: draft_needs_native_review
+- id: E1-wrench-01
+  condition: E1
+  target: wrench
+  text: Grab the wrench and drop it in the tray
+  status: draft_needs_native_review
+- id: E1-wrench-02
+  condition: E1
+  target: wrench
+  text: Put the wrench into the tray
+  status: draft_needs_native_review
+- id: E1-wrench-03
+  condition: E1
+  target: wrench
+  text: Could you move the wrench to the tray?
+  status: draft_needs_native_review
+- id: E1-wrench-04
+  condition: E1
+  target: wrench
+  text: Take the wrench and place it in the tray
+  status: draft_needs_native_review
+- id: E1-wrench-05
+  condition: E1
+  target: wrench
+  text: Pick the wrench up and set it in the tray
+  status: draft_needs_native_review
+- id: E1-wrench-06
+  condition: E1
+  target: wrench
+  text: I need the wrench in the tray
+  status: draft_needs_native_review
+- id: E1-wrench-07
+  condition: E1
+  target: wrench
+  text: Please get the wrench and put it into the tray
+  status: draft_needs_native_review
+- id: E1-wrench-08
+  condition: E1
+  target: wrench
+  text: Move the wrench over to the tray
+  status: draft_needs_native_review
+- id: E1-wrench-09
+  condition: E1
+  target: wrench
+  text: Hand me the wrench, put it in the tray
+  status: draft_needs_native_review
+- id: E1-wrench-10
+  condition: E1
+  target: wrench
+  text: Lift the wrench and leave it in the tray
+  status: draft_needs_native_review
+- id: S1-screwdriver-01
+  condition: S1
+  target: screwdriver
+  text: Toma el destornillador y ponlo en la charola
+  status: draft_needs_native_review
+- id: S1-screwdriver-02
+  condition: S1
+  target: screwdriver
+  text: Coloca el destornillador en la charola
+  status: draft_needs_native_review
+- id: S1-screwdriver-03
+  condition: S1
+  target: screwdriver
+  text: Por favor, lleva el destornillador a la charola
+  status: draft_needs_native_review
+- id: S1-screwdriver-04
+  condition: S1
+  target: screwdriver
+  text: Levanta el destornillador y déjalo en la charola
+  status: draft_needs_native_review
+- id: S1-screwdriver-05
+  condition: S1
+  target: screwdriver
+  text: Toma el destornillador y colócalo en la bandeja
+  status: draft_needs_native_review
+- id: S1-screwdriver-06
+  condition: S1
+  target: screwdriver
+  text: ¿Podrías poner el destornillador en la charola?
+  status: draft_needs_native_review
+- id: S1-screwdriver-07
+  condition: S1
+  target: screwdriver
+  text: Recoge el destornillador y deposítalo en la charola
+  status: draft_needs_native_review
+- id: S1-screwdriver-08
+  condition: S1
+  target: screwdriver
+  text: Necesito el destornillador en la charola
+  status: draft_needs_native_review
+- id: S1-screwdriver-09
+  condition: S1
+  target: screwdriver
+  text: Mueve el destornillador a la charola, por favor
+  status: draft_needs_native_review
+- id: S1-screwdriver-10
+  condition: S1
+  target: screwdriver
+  text: Traslada el destornillador a la charola
+  status: draft_needs_native_review
+- id: S1-pliers-01
+  condition: S1
+  target: pliers
+  text: Toma las pinzas y ponlas en la charola
+  status: draft_needs_native_review
+- id: S1-pliers-02
+  condition: S1
+  target: pliers
+  text: Coloca las pinzas en la charola
+  status: draft_needs_native_review
+- id: S1-pliers-03
+  condition: S1
+  target: pliers
+  text: Por favor, lleva las pinzas a la charola
+  status: draft_needs_native_review
+- id: S1-pliers-04
+  condition: S1
+  target: pliers
+  text: Levanta las pinzas y déjalas en la charola
+  status: draft_needs_native_review
+- id: S1-pliers-05
+  condition: S1
+  target: pliers
+  text: Toma las pinzas y colócalas en la bandeja
+  status: draft_needs_native_review
+- id: S1-pliers-06
+  condition: S1
+  target: pliers
+  text: ¿Podrías poner las pinzas en la charola?
+  status: draft_needs_native_review
+- id: S1-pliers-07
+  condition: S1
+  target: pliers
+  text: Recoge las pinzas y deposítalas en la charola
+  status: draft_needs_native_review
+- id: S1-pliers-08
+  condition: S1
+  target: pliers
+  text: Necesito las pinzas en la charola
+  status: draft_needs_native_review
+- id: S1-pliers-09
+  condition: S1
+  target: pliers
+  text: Mueve las pinzas a la charola, por favor
+  status: draft_needs_native_review
+- id: S1-pliers-10
+  condition: S1
+  target: pliers
+  text: Traslada las pinzas a la charola
+  status: draft_needs_native_review
+- id: S1-wrench-01
+  condition: S1
+  target: wrench
+  text: Toma la llave y ponla en la charola
+  status: draft_needs_native_review
+- id: S1-wrench-02
+  condition: S1
+  target: wrench
+  text: Coloca la llave en la charola
+  status: draft_needs_native_review
+- id: S1-wrench-03
+  condition: S1
+  target: wrench
+  text: Por favor, lleva la llave a la charola
+  status: draft_needs_native_review
+- id: S1-wrench-04
+  condition: S1
+  target: wrench
+  text: Levanta la llave y déjala en la charola
+  status: draft_needs_native_review
+- id: S1-wrench-05
+  condition: S1
+  target: wrench
+  text: Toma la llave y colócala en la bandeja
+  status: draft_needs_native_review
+- id: S1-wrench-06
+  condition: S1
+  target: wrench
+  text: ¿Podrías poner la llave en la charola?
+  status: draft_needs_native_review
+- id: S1-wrench-07
+  condition: S1
+  target: wrench
+  text: Recoge la llave y deposítala en la charola
+  status: draft_needs_native_review
+- id: S1-wrench-08
+  condition: S1
+  target: wrench
+  text: Necesito la llave en la charola
+  status: draft_needs_native_review
+- id: S1-wrench-09
+  condition: S1
+  target: wrench
+  text: Mueve la llave a la charola, por favor
+  status: draft_needs_native_review
+- id: S1-wrench-10
+  condition: S1
+  target: wrench
+  text: Traslada la llave a la charola
+  status: draft_needs_native_review
+- id: S2-screwdriver-01
+  condition: S2
+  target: screwdriver
+  text: Pásame el desarmador y ponlo en la charola
+  status: draft_needs_native_review
+- id: S2-screwdriver-02
+  condition: S2
+  target: screwdriver
+  text: Échame el desarmador en la charola
+  status: draft_needs_native_review
+- id: S2-screwdriver-03
+  condition: S2
+  target: screwdriver
+  text: Agarra el desarmador y aviéntalo a la charola
+  status: draft_needs_native_review
+- id: S2-screwdriver-04
+  condition: S2
+  target: screwdriver
+  text: Oye, ¿me pasas el desarmador a la charola?
+  status: draft_needs_native_review
+- id: S2-screwdriver-05
+  condition: S2
+  target: screwdriver
+  text: Pon el desarmador ahí en la charola
+  status: draft_needs_native_review
+- id: S2-screwdriver-06
+  condition: S2
+  target: screwdriver
+  text: Jálate el desarmador pa' la charola
+  status: draft_needs_native_review
+- id: S2-screwdriver-07
+  condition: S2
+  target: screwdriver
+  text: Mete el desarmador a la charola
+  status: draft_needs_native_review
+- id: S2-screwdriver-08
+  condition: S2
+  target: screwdriver
+  text: Ándale, pásame el desarmador a la charola
+  status: draft_needs_native_review
+- id: S2-screwdriver-09
+  condition: S2
+  target: screwdriver
+  text: Pícale y pon el desarmador en la charola
+  status: draft_needs_native_review
+- id: S2-screwdriver-10
+  condition: S2
+  target: screwdriver
+  text: Ahí te encargo el desarmador en la charola
+  status: draft_needs_native_review
+- id: S2-pliers-01
+  condition: S2
+  target: pliers
+  text: Pásame las pinzas y ponlas en la charola
+  status: draft_needs_native_review
+- id: S2-pliers-02
+  condition: S2
+  target: pliers
+  text: Échame las pinzas en la charola
+  status: draft_needs_native_review
+- id: S2-pliers-03
+  condition: S2
+  target: pliers
+  text: Agarra las pinzas y aviéntalas a la charola
+  status: draft_needs_native_review
+- id: S2-pliers-04
+  condition: S2
+  target: pliers
+  text: Oye, ¿me pasas las pinzas a la charola?
+  status: draft_needs_native_review
+- id: S2-pliers-05
+  condition: S2
+  target: pliers
+  text: Pon las pinzas ahí en la charola
+  status: draft_needs_native_review
+- id: S2-pliers-06
+  condition: S2
+  target: pliers
+  text: Jálate las pinzas pa' la charola
+  status: draft_needs_native_review
+- id: S2-pliers-07
+  condition: S2
+  target: pliers
+  text: Mete las pinzas a la charola
+  status: draft_needs_native_review
+- id: S2-pliers-08
+  condition: S2
+  target: pliers
+  text: Ándale, pásame las pinzas a la charola
+  status: draft_needs_native_review
+- id: S2-pliers-09
+  condition: S2
+  target: pliers
+  text: Pícale y pon las pinzas en la charola
+  status: draft_needs_native_review
+- id: S2-pliers-10
+  condition: S2
+  target: pliers
+  text: Ahí te encargo las pinzas en la charola
+  status: draft_needs_native_review
+- id: S2-wrench-01
+  condition: S2
+  target: wrench
+  text: Pásame la llave y ponla en la charola
+  status: draft_needs_native_review
+- id: S2-wrench-02
+  condition: S2
+  target: wrench
+  text: Échame la llave en la charola
+  status: draft_needs_native_review
+- id: S2-wrench-03
+  condition: S2
+  target: wrench
+  text: Agarra la llave y aviéntala a la charola
+  status: draft_needs_native_review
+- id: S2-wrench-04
+  condition: S2
+  target: wrench
+  text: Oye, ¿me pasas la llave a la charola?
+  status: draft_needs_native_review
+- id: S2-wrench-05
+  condition: S2
+  target: wrench
+  text: Pon la llave ahí en la charola
+  status: draft_needs_native_review
+- id: S2-wrench-06
+  condition: S2
+  target: wrench
+  text: Jálate la llave pa' la charola
+  status: draft_needs_native_review
+- id: S2-wrench-07
+  condition: S2
+  target: wrench
+  text: Mete la llave a la charola
+  status: draft_needs_native_review
+- id: S2-wrench-08
+  condition: S2
+  target: wrench
+  text: Ándale, pásame la llave a la charola
+  status: draft_needs_native_review
+- id: S2-wrench-09
+  condition: S2
+  target: wrench
+  text: Pícale y pon la llave en la charola
+  status: draft_needs_native_review
+- id: S2-wrench-10
+  condition: S2
+  target: wrench
+  text: Ahí te encargo la llave en la charola
+  status: draft_needs_native_review
+- id: S3-screwdriver-01
+  condition: S3
+  target: screwdriver
+  text: Agarra el screwdriver y ponlo en la tray
+  status: draft_needs_native_review
+- id: S3-screwdriver-02
+  condition: S3
+  target: screwdriver
+  text: Pásame el screwdriver
+  status: draft_needs_native_review
+- id: S3-screwdriver-03
+  condition: S3
+  target: screwdriver
+  text: Pon el screwdriver en la charola
+  status: draft_needs_native_review
+- id: S3-screwdriver-04
+  condition: S3
+  target: screwdriver
+  text: Échame el screwdriver en la tray
+  status: draft_needs_native_review
+- id: S3-screwdriver-05
+  condition: S3
+  target: screwdriver
+  text: Grab el desarmador y ponlo en la tray
+  status: draft_needs_native_review
+- id: S3-screwdriver-06
+  condition: S3
+  target: screwdriver
+  text: Toma el screwdriver y drop it en la charola
+  status: draft_needs_native_review
+- id: S3-screwdriver-07
+  condition: S3
+  target: screwdriver
+  text: Mueve el screwdriver a la tray, porfa
+  status: draft_needs_native_review
+- id: S3-screwdriver-08
+  condition: S3
+  target: screwdriver
+  text: Pick up el desarmador y ponlo en la tray
+  status: draft_needs_native_review
+- id: S3-screwdriver-09
+  condition: S3
+  target: screwdriver
+  text: Oye, el screwdriver a la tray
+  status: draft_needs_native_review
+- id: S3-screwdriver-10
+  condition: S3
+  target: screwdriver
+  text: Ponme el screwdriver en el tray
+  status: draft_needs_native_review
+- id: S3-pliers-01
+  condition: S3
+  target: pliers
+  text: Agarra las pliers y ponlas en la tray
+  status: draft_needs_native_review
+- id: S3-pliers-02
+  condition: S3
+  target: pliers
+  text: Pásame las pliers
+  status: draft_needs_native_review
+- id: S3-pliers-03
+  condition: S3
+  target: pliers
+  text: Pon las pliers en la charola
+  status: draft_needs_native_review
+- id: S3-pliers-04
+  condition: S3
+  target: pliers
+  text: Échame las pliers en la tray
+  status: draft_needs_native_review
+- id: S3-pliers-05
+  condition: S3
+  target: pliers
+  text: Grab las pinzas y ponlas en la tray
+  status: draft_needs_native_review
+- id: S3-pliers-06
+  condition: S3
+  target: pliers
+  text: Toma las pliers y drop them en la charola
+  status: draft_needs_native_review
+- id: S3-pliers-07
+  condition: S3
+  target: pliers
+  text: Mueve las pliers a la tray, porfa
+  status: draft_needs_native_review
+- id: S3-pliers-08
+  condition: S3
+  target: pliers
+  text: Pick up las pinzas y ponlas en la tray
+  status: draft_needs_native_review
+- id: S3-pliers-09
+  condition: S3
+  target: pliers
+  text: Oye, las pliers a la tray
+  status: draft_needs_native_review
+- id: S3-pliers-10
+  condition: S3
+  target: pliers
+  text: Ponme las pliers en el tray
+  status: draft_needs_native_review
+- id: S3-wrench-01
+  condition: S3
+  target: wrench
+  text: Agarra el wrench y ponlo en la tray
+  status: draft_needs_native_review
+- id: S3-wrench-02
+  condition: S3
+  target: wrench
+  text: Pásame el wrench
+  status: draft_needs_native_review
+- id: S3-wrench-03
+  condition: S3
+  target: wrench
+  text: Pon el wrench en la charola
+  status: draft_needs_native_review
+- id: S3-wrench-04
+  condition: S3
+  target: wrench
+  text: Échame el wrench en la tray
+  status: draft_needs_native_review
+- id: S3-wrench-05
+  condition: S3
+  target: wrench
+  text: Grab la llave y ponla en la tray
+  status: draft_needs_native_review
+- id: S3-wrench-06
+  condition: S3
+  target: wrench
+  text: Toma el wrench y drop it en la charola
+  status: draft_needs_native_review
+- id: S3-wrench-07
+  condition: S3
+  target: wrench
+  text: Mueve el wrench a la tray, porfa
+  status: draft_needs_native_review
+- id: S3-wrench-08
+  condition: S3
+  target: wrench
+  text: Pick up la llave y ponla en la tray
+  status: draft_needs_native_review
+- id: S3-wrench-09
+  condition: S3
+  target: wrench
+  text: Oye, el wrench a la tray
+  status: draft_needs_native_review
+- id: S3-wrench-10
+  condition: S3
+  target: wrench
+  text: Ponme el wrench en el tray
+  status: draft_needs_native_review
+- id: A1-01
+  condition: A1
+  target: null
+  text: Pásame las pinzas
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-02
+  condition: A1
+  target: null
+  text: Pon las pinzas en la charola
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-03
+  condition: A1
+  target: null
+  text: Agarra las pinzas
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-04
+  condition: A1
+  target: null
+  text: Las pinzas a la charola
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-05
+  condition: A1
+  target: null
+  text: Échame las pinzas
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-06
+  condition: A1
+  target: null
+  text: Toma las pinzas y ponlas en la charola
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-07
+  condition: A1
+  target: null
+  text: Necesito las pinzas
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-08
+  condition: A1
+  target: null
+  text: ¿Me das las pinzas?
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-09
+  condition: A1
+  target: null
+  text: Agarra las pliers
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-10
+  condition: A1
+  target: null
+  text: Pásame las pliers
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-11
+  condition: A1
+  target: null
+  text: Coloca las pinzas en la bandeja
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-12
+  condition: A1
+  target: null
+  text: Levanta las pinzas
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-13
+  condition: A1
+  target: null
+  text: Oye, las pinzas
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-14
+  condition: A1
+  target: null
+  text: Pásame unas pinzas
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-15
+  condition: A1
+  target: null
+  text: Unas pinzas a la charola, porfa
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-16
+  condition: A1
+  target: null
+  text: Tráeme las pinzas
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-17
+  condition: A1
+  target: null
+  text: Ponme las pinzas en la tray
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-18
+  condition: A1
+  target: null
+  text: Las pinzas, por favor
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-19
+  condition: A1
+  target: null
+  text: Recoge las pinzas y déjalas en la charola
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-20
+  condition: A1
+  target: null
+  text: Jálate las pinzas
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-21
+  condition: A1
+  target: null
+  text: Pícale, las pinzas a la charola
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-22
+  condition: A1
+  target: null
+  text: Ahí te encargo las pinzas
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-23
+  condition: A1
+  target: null
+  text: Échame las pliers en la charola
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-24
+  condition: A1
+  target: null
+  text: Grab las pinzas
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-25
+  condition: A1
+  target: null
+  text: Mueve las pinzas a la charola
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-26
+  condition: A1
+  target: null
+  text: ¿Puedes poner las pinzas en la charola?
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-27
+  condition: A1
+  target: null
+  text: Dame las pinzas
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-28
+  condition: A1
+  target: null
+  text: Ándale, las pinzas
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-29
+  condition: A1
+  target: null
+  text: Lleva las pinzas a la charola
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: A1-30
+  condition: A1
+  target: null
+  text: Agarra la pinza y ponla en la charola
+  ambiguous_between:
+  - pliers
+  - precision_pliers
+  status: draft_needs_native_review
+- id: O1-01
+  condition: O1
+  target: null
+  text: Pásame el multímetro
+  absent_object: multimeter
+  status: draft_needs_native_review
+- id: O1-02
+  condition: O1
+  target: null
+  text: Pon el multímetro en la charola
+  absent_object: multimeter
+  status: draft_needs_native_review
+- id: O1-03
+  condition: O1
+  target: null
+  text: Agarra el flexómetro
+  absent_object: tape_measure
+  status: draft_needs_native_review
+- id: O1-04
+  condition: O1
+  target: null
+  text: Échame el flexómetro en la charola
+  absent_object: tape_measure
+  status: draft_needs_native_review
+- id: O1-05
+  condition: O1
+  target: null
+  text: Pásame la cinta de aislar
+  absent_object: tape_roll
+  status: draft_needs_native_review
+- id: O1-06
+  condition: O1
+  target: null
+  text: Pon el tape en la charola
+  absent_object: tape_roll
+  status: draft_needs_native_review
+- id: O1-07
+  condition: O1
+  target: null
+  text: Agarra el carrete de estaño
+  absent_object: solder_spool
+  status: draft_needs_native_review
+- id: O1-08
+  condition: O1
+  target: null
+  text: Pásame el estaño
+  absent_object: solder_spool
+  status: draft_needs_native_review
+- id: O1-09
+  condition: O1
+  target: null
+  text: Pásame el martillo
+  absent_object: hammer
+  status: draft_needs_native_review
+- id: O1-10
+  condition: O1
+  target: null
+  text: Pon el martillo en la charola
+  absent_object: hammer
+  status: draft_needs_native_review
+- id: O1-11
+  condition: O1
+  target: null
+  text: Agarra las tijeras
+  absent_object: scissors
+  status: draft_needs_native_review
+- id: O1-12
+  condition: O1
+  target: null
+  text: Échame las tijeras en la charola
+  absent_object: scissors
+  status: draft_needs_native_review
+- id: O1-13
+  condition: O1
+  target: null
+  text: Pásame el cúter
+  absent_object: cutter
+  status: draft_needs_native_review
+- id: O1-14
+  condition: O1
+  target: null
+  text: Pon el cúter en la tray
+  absent_object: cutter
+  status: draft_needs_native_review
+- id: O1-15
+  condition: O1
+  target: null
+  text: Agarra el taladro
+  absent_object: drill
+  status: draft_needs_native_review
+- id: O1-16
+  condition: O1
+  target: null
+  text: Pásame la lima
+  absent_object: file
+  status: draft_needs_native_review
+- id: O1-17
+  condition: O1
+  target: null
+  text: Pon la segueta en la charola
+  absent_object: hacksaw
+  status: draft_needs_native_review
+- id: O1-18
+  condition: O1
+  target: null
+  text: Pásame el nivel
+  absent_object: level
+  status: draft_needs_native_review
+- id: O1-19
+  condition: O1
+  target: null
+  text: Agarra la brocha
+  absent_object: brush
+  status: draft_needs_native_review
+- id: O1-20
+  condition: O1
+  target: null
+  text: Pásame el cautín
+  absent_object: soldering_iron
+  status: draft_needs_native_review
+- id: O1-21
+  condition: O1
+  target: null
+  text: Pásame el multimeter
+  absent_object: multimeter
+  status: draft_needs_native_review
+- id: O1-22
+  condition: O1
+  target: null
+  text: Grab el tape measure
+  absent_object: tape_measure
+  status: draft_needs_native_review
+- id: O1-23
+  condition: O1
+  target: null
+  text: Pon el hammer en la charola
+  absent_object: hammer
+  status: draft_needs_native_review
+- id: O1-24
+  condition: O1
+  target: null
+  text: Toma el calibrador y ponlo en la charola
+  absent_object: caliper
+  status: draft_needs_native_review
+- id: O1-25
+  condition: O1
+  target: null
+  text: Pásame el vernier
+  absent_object: caliper
+  status: draft_needs_native_review
+- id: O1-26
+  condition: O1
+  target: null
+  text: Agarra la pistola de silicón
+  absent_object: glue_gun
+  status: draft_needs_native_review
+- id: O1-27
+  condition: O1
+  target: null
+  text: Échame los tornillos en la charola
+  absent_object: screws
+  status: draft_needs_native_review
+- id: O1-28
+  condition: O1
+  target: null
+  text: Pásame la batería
+  absent_object: battery
+  status: draft_needs_native_review
+- id: O1-29
+  condition: O1
+  target: null
+  text: Pon el marcador en la charola
+  absent_object: marker
+  status: draft_needs_native_review
+- id: O1-30
+  condition: O1
+  target: null
+  text: Agarra el pelacables
+  absent_object: wire_stripper
+  status: draft_needs_native_review

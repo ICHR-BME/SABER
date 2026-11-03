@@ -68,3 +68,28 @@ Verified by downloading the wheels (`pip download --no-deps`) and reading the so
   so end-to-end tests can check that the right object reaches the tray.
 - GELLO mapping assumes X-series Dynamixel (Present Position at address 132). Confirm the servo
   model when the GELLO is built.
+
+## D4. Language (Phase 3)
+
+- **Command bank** `saber/lang/command_bank/phase_a.yaml`: 183 LLM-drafted entries, all
+  `status: draft_needs_native_review`. 30 per condition for E1, S1, S2, S3 (10 per object), A1
+  and O1. **E0 has 3 entries** (one canonical training instruction per object): E0 is the
+  canonical instruction by definition, so 30 distinct E0 strings would contradict its meaning
+  (PROPUESTA 2.3.2 says 30 per condition; this is the one deviation). V1/V2 are spoken S2
+  entries, recorded later, not written.
+- **ASR n-best.** faster-whisper 1.2.1 exposes only the best hypothesis per `transcribe` call
+  (no n-best list, even with `beam_size > 1`). The n-best list is built from 5 decodings
+  (beam 5 / greedy at T = 0, 0.4, 0.8, 1.0), identical transcripts merged, weights =
+  softmax of duration-weighted `avg_logprob`. openai-whisper was not added (same limitation,
+  heavier; faster-whisper is the faster option the prompt allowed).
+- Noise mixer sets SNR exactly over the clip; if the mix would exceed full scale the whole mix
+  is rescaled (SNR preserved), never clipped.
+- **Interpreter weights**: probability of each sampled sequence (`compute_transition_scores`,
+  normalized logits), identical texts merged by summing probability, then renormalized; uniform
+  weights are the ablation. Image input: interface accepts a frame, but the HF backend is
+  text-only for now (a VLM backend is a TODO once the pilot picks a model).
+- The rule interpreter / lexicon is closed-vocabulary by design (it is also the S4 parser).
+  Its pilot score on the draft bank is circular (the lexicon was written next to the bank) and
+  must not be reported as a result.
+- Pilot candidate models: existence on the Hub checked, nothing about quality is assumed.
+  Gemma 3 and Llama 3.2 are gated.
