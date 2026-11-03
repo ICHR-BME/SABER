@@ -19,6 +19,7 @@ Versión 2 · 3 de noviembre de 2026 (sustituye a la v1 del 28 de septiembre de 
 | 5 | Cronograma rebaselinado al 3 de noviembre | Al 3 de noviembre el repositorio solo contiene la licencia: el plan de 10 semanas iba en la semana 6 sin código | Las compuertas G2–G3 se recorren; G3 probablemente cae en la Fase B |
 | 6 | Registro en Expoingenierías | Requisito académico (materia MR-2035) | Se agrega una demo de expo como entregable intermedio |
 | 7 | Se elimina toda movilidad: sin base móvil, sin AGV, sin integración con el AGV | Decisión del equipo (3 nov 2026): lo importante es el VLA | El brazo es fijo y se prueba en una **celda** que ya tiene cámaras montadas y seguridad perimetral |
+| 8 | Brazo confirmado: **xArm 6** (no Lite 6), controlado directo por IP con el xArm-Python-SDK; se monta una **cámara de muñeca**; el supervisor en software se reduce a lo mínimo | Confirmado por el equipo (3 nov 2026) | Se cierran tres decisiones abiertas; se retira R11 |
 
 ---
 
@@ -92,11 +93,11 @@ Tubería: **escuchar → transcribir → interpretar → verificar (IMG) → act
 
 | Componente | Elección | Notas |
 |---|---|---|
-| Brazo | uFactory xArm 6 del laboratorio | Confirmar disponibilidad, horas de uso, versión de firmware y controlador |
+| Brazo | uFactory xArm 6 (confirmado), fijo en la celda | Conexión directa por IP al controlador; control libre con el xArm-Python-SDK (posición articular o cartesiana, modo servo para lazo cerrado) |
 | Pinza | xArm Gripper (confirmar modelo) | Si no existe, es la mayor partida del presupuesto |
-| Cámaras | Las ya montadas en la celda | Confirmar número, posición, resolución y frecuencia, y si hay vista de muñeca. SmolVLA admite varias vistas; si la celda no tiene cámara de muñeca, se evalúa agregar una (soporte impreso en la Bambu Lab A1) |
+| Cámaras | Fija(s) de la celda + **una cámara USB de muñeca** (se monta) | Soporte de muñeca impreso en la Bambu Lab A1; confirmar resolución y frecuencia de las cámaras de la celda |
 | Teleoperación | **Opción preferida: GELLO para xArm** (réplica cinemática con servos Dynamixel). Alternas: SpaceMouse en espacio cartesiano; modo manual (guiado a mano) del xArm | El guiado a mano mete la mano del operador en la imagen y contamina las demos; usarlo solo como último recurso |
-| Integración | Clase `Robot` propia para LeRobot sobre el xArm-Python-SDK | Verificar la guía de integración de hardware de la versión de LeRobot fijada |
+| Integración | Clase `Robot` delgada para LeRobot sobre el xArm-Python-SDK por IP | Verificar la guía de integración de hardware de la versión de LeRobot fijada |
 | Política | SmolVLA [15] (450 M) ajustada por tarea | Espacio de acción: 6 articulaciones + pinza (7), distinto del SO-100 preentrenado |
 | ASR | Whisper en la laptop | n-best por beam search o temperatura |
 | Intérprete | LLM/VLM multilingüe abierto y pequeño | Se elige con un piloto de 200 enunciados |
@@ -129,15 +130,15 @@ La compuerta corre al inicio del episodio y en cada replanteo hasta que la pinza
 - **G-int:** Mahalanobis del estado oculto + consistencia de trozos, al estilo de VLA-FAIL [21] (según su resumen).
 - **G-pert:** desacuerdo por perturbación de pesos de bajo rango, al estilo de PFD [22] (Fase B).
 
-#### 2.2.5 Seguridad: celda, controlador y supervisor
+#### 2.2.5 Seguridad: celda y límites mínimos
 
-La celda ya aporta la seguridad perimetral (paro de emergencia y protección de acceso; confirmar qué incluye y cómo se reinicia). Eso protege a las personas, pero no evita que una política equivocada choque el brazo con la mesa, los objetos o las cámaras. Por eso se mantienen dos capas más:
+La celda aporta la seguridad perimetral (paro de emergencia y protección de acceso). Sobre ella se agrega solo lo mínimo:
 
-- **En el controlador del xArm** (funciones del xArm-Python-SDK; verificar nombres en la versión instalada): sensibilidad de colisión alta, modo reducido con velocidad TCP máxima baja, límite cartesiano del TCP (caja de trabajo) y límites articulares.
-- **En software, entre política y SDK:** límites articulares, tope de velocidad y aceleración por paso, caja de trabajo, rechazo de acciones con saltos mayores a un umbral, y paro si se pierde la cámara o la política tarda más de un plazo.
+- **En el controlador del xArm** (configurado una vez al conectar, con el xArm-Python-SDK; verificar nombres de funciones): detección de colisión activa, velocidad TCP reducida y una caja cartesiana del TCP que deje fuera la mesa y la cámara de muñeca.
+- **En software:** recorte de cada acción a los límites articulares y a un salto máximo por paso, y paro si la política deja de responder.
 - **Paro de emergencia de la celda** al alcance del operador en todo ensayo.
 
-El supervisor es independiente del modelo y **no está certificado** como dispositivo de seguridad. El prototipo no pretende cumplir ISO 10218 ni ISO/TS 15066 y no debe describirse como certificado.
+No es un módulo de investigación: es el mínimo para que una acción equivocada del VLA no choque el brazo. **No está certificado** como dispositivo de seguridad. El prototipo no pretende cumplir ISO 10218 ni ISO/TS 15066 y no debe describirse como certificado.
 
 ### 2.3 Diseño experimental
 
@@ -207,7 +208,7 @@ Estado de partida: documentos de propuesta y revisión listos; repositorio con s
 
 | Bloque | Fechas | Contenido | Compuerta |
 |---|---|---|---|
-| A1 | 3–9 nov | Software base, interfaz de control del xArm + supervisor, teleoperación, integración con las cámaras de la celda, piloto de LIBERO-Goal | — |
+| A1 | 3–9 nov | Software base, conexión al xArm por IP, teleoperación, montaje de cámara de muñeca, piloto de LIBERO-Goal | — |
 | A2 | 10–16 nov | Piloto de 50 demos de T1, primer ajuste de SmolVLA, controles | **G0:** éxito en inglés ≥ 50 % y ≥ 20 puntos sobre sin instrucción |
 | A3 | 17–23 nov | Resto de demos, diagnóstico S0 en robot + ODPB, LIBERO-Goal en español | **G1:** español crudo y Spanglish cerca del azar y bajo inglés (p < 0.01, n ≥ 300 decisiones fuera de línea) |
 | A4 | 24–30 nov | IMG y bases fuera de línea; demo para Expoingenierías | **G2:** IMG supera a toda base en AUROC en 2 de 3 cambios |
@@ -222,12 +223,12 @@ El brazo y la laptop ya existen. Cifras en USD, sin envío ni aranceles; **estim
 
 | Concepto | Costo (USD, est.) | Notas |
 |---|---|---|
-| Cámara de muñeca, solo si la celda no tiene | 0–30 | Las cámaras de la celda ya existen |
+| Cámara USB de muñeca + soporte impreso | 15–40 | Las cámaras fijas de la celda ya existen |
 | Micrófono y bocina USB | 30–60 | |
 | Objetos, charolas, sujetadores, pinzas de precisión para A1 | 30–60 | |
 | Teleoperación: GELLO para xArm (servos Dynamixel + adaptador) | 250–350 | Alternativa: SpaceMouse, 150–200 |
 | GPU en la nube (ajustes de SmolVLA y LIBERO) | 50–150 | SmolVLA, 20 mil pasos: unas 4 h en A100 según la documentación de LeRobot |
-| **Núcleo** | **360–650** | |
+| **Núcleo** | **375–660** | |
 | Pinza del xArm, si el laboratorio no la tiene | Por cotizar | Puede superar al resto del presupuesto |
 | Fase B: GPU para π0.5 con LoRA (> 22.5 GB) | 100–250 | Se libera con G4 |
 
@@ -236,13 +237,12 @@ El brazo y la laptop ya existen. Cifras en USD, sin envío ni aranceles; **estim
 | # | Riesgo | Prob. | Impacto | Mitigación |
 |---|---|---|---|---|
 | R1 | SmolVLA no aprende bien en el xArm 6 (transferencia de morfología) o ignora el lenguaje | Media-alta | Alto | Control sin instrucción en G0; más demos; ACT como respaldo para el diagnóstico |
-| R2 | Integración LeRobot–xArm toma más de una semana | Alta | Alto | Empezar el día 1; usar el SDK directo y un formato de dataset compatible |
+| R2 | Integración LeRobot–xArm toma más de una semana | Media | Alto | Empezar el día 1; usar el SDK directo y un formato de dataset compatible |
 | R3 | Teleoperación de baja calidad | Media | Alto | GELLO; evaluar SpaceMouse en el día 1 |
 | R4 | No aparece brecha en español | Baja | Alto | G1; giro a vocabulario abierto u otro modelo |
 | R5 | IMG no supera a las bases | Media | Medio | G2; reposicionar a diagnóstico y banco |
 | R6 | Tiempo de robot (disponibilidad del xArm compartido) | Alta | Alto | Reservar bloques; ODPB y simulación en paralelo |
-| R7 | Lesión o daño por un brazo de 5 kg de carga | Baja | Muy alto | Seguridad de la celda, modo reducido, supervisor, regla de dos personas |
-| R11 | Las cámaras de la celda no sirven para la política (ángulo, resolución, sin vista de muñeca) | Media | Medio | Revisar en la semana 1; agregar cámara de muñeca si hace falta |
+| R7 | Lesión o daño por un brazo de 5 kg de carga | Baja | Muy alto | Seguridad de la celda, configuración del controlador, límites mínimos, regla de dos personas |
 | R8 | Otro grupo publica antes | Media | Medio | Preprint en G4; vigilancia semanal |
 | R9 | Ética de datos de voz | Media | Medio | Consentimiento, anonimización; vía institucional definida por el PM |
 | R10 | Traspaso a otro integrante del equipo | Media | Medio | `docs/HANDOFF.md` y `CLAUDE.md` en el repositorio |
@@ -262,7 +262,7 @@ El brazo y la laptop ya existen. Cifras en USD, sin envío ni aranceles; **estim
 - **D3** Biblioteca IMG con envoltura para LeRobot y driver del xArm 6.
 - **D4** Artículo y preprint.
 - **D5** Video de demo y demo en vivo para Expoingenierías.
-- **D6** Notas de montaje en la celda (cámaras, teleoperación, supervisor).
+- **D6** Notas de montaje en la celda (cámara de muñeca, teleoperación).
 
 | Sede | Fecha límite | Comentario |
 |---|---|---|
@@ -283,7 +283,7 @@ El brazo y la laptop ya existen. Cifras en USD, sin envío ni aranceles; **estim
 | Dos anotadores nativos de español mexicano | Banco de comandos y etiquetado ciego |
 | Asesor académico | Diseño experimental y estadística |
 
-**Decisiones requeridas:** (1) presupuesto del núcleo; (2) horario de uso del xArm 6 y existencia de la pinza; (3) sede objetivo; (4) vía ética para voz; (5) créditos de GPU; (6) acceso a la celda y a sus cámaras.
+**Decisiones requeridas:** (1) presupuesto del núcleo; (2) horario de uso del xArm 6 y existencia de la pinza; (3) sede objetivo; (4) vía ética para voz; (5) créditos de GPU; (6) acceso a la celda.
 
 ---
 

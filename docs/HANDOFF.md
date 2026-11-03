@@ -3,7 +3,7 @@
 Para: el integrante del equipo que continúa el proyecto, y para su asistente de IA.
 De: Ian Carlos Hernández Robles · Última actualización: 3 de noviembre de 2026
 
-> **Instrucciones para el asistente (Claude u otro):** este archivo es tu punto de partida. Antes de proponer o escribir nada, lee en este orden: (1) este documento completo, (2) `docs/PROPUESTA.md`, (3) `CLAUDE.md` y `docs/DECISIONS.md` si existen. La propuesta es la fuente de verdad del diseño experimental. No inventes resultados, parámetros del robot ni fechas; si algo no está aquí ni en la propuesta, pregunta al usuario. Toda ejecución en el robot real pasa por el supervisor de seguridad y requiere a un humano presente.
+> **Instrucciones para el asistente (Claude u otro):** este archivo es tu punto de partida. Antes de proponer o escribir nada, lee en este orden: (1) este documento completo, (2) `docs/PROPUESTA.md`, (3) `CLAUDE.md` y `docs/DECISIONS.md` si existen. La propuesta es la fuente de verdad del diseño experimental. No inventes resultados, parámetros del robot ni fechas; si algo no está aquí ni en la propuesta, pregunta al usuario. Toda ejecución en el robot real requiere a un humano presente con el paro de la celda a la mano.
 
 ---
 
@@ -27,7 +27,8 @@ Repositorio: `github.com/ICHR-BME/SABER` (licencia MIT).
 ## 3. Decisiones ya tomadas (no reabrir sin motivo)
 
 1. Lo importante es el **VLA**. El brazo es fijo y se prueba en una **celda**. Nada de base móvil ni AGV.
-2. Brazo: **uFactory xArm 6** del laboratorio (no SO-101). Consecuencias en la sección 0 de la propuesta.
+2. Brazo: **uFactory xArm 6** (confirmado, no Lite 6), fijo en la celda. Se controla **directo por IP** con el xArm-Python-SDK; no hay otra capa de control de la celda en medio.
+2b. Cámaras: las fijas de la celda + **una cámara de muñeca** que se va a montar.
 3. Política principal: **SmolVLA**, ajustada solo con instrucciones en inglés (eso es lo que se diagnostica).
 4. Fase A con **3 objetos**: desarmador, pinzas, llave. Tarea T1: "toma X y ponlo en la charola".
 5. La novedad declarada es **moderada**. El antecedente más cercano es UPS (Yuan et al., RSS 2026). No vender la compuerta como "primera" ni la brecha multilingüe como "nunca medida".
@@ -40,15 +41,13 @@ Repositorio: `github.com/ICHR-BME/SABER` (licencia MIT).
 |---|---|---|---|
 | 1 | Horario de uso del xArm 6 y quién más lo usa | PM / laboratorio | Todo el trabajo en robot |
 | 2 | ¿Hay pinza para el xArm? ¿Qué modelo? | Laboratorio | Demos |
-| 3 | ¿Es xArm 6 o Lite 6? (son robots distintos) | Confirmar físicamente | Driver, URDF, abstract de la expo |
 | 4 | Teleoperación: GELLO (~USD 250–350) o SpaceMouse (~USD 150–200) | Equipo + PM | Demos |
 | 5 | Presupuesto del núcleo (~USD 390–680) | PM | Compras |
 | 6 | Vía ética para grabaciones de voz | PM | Condiciones V1 y V2 |
 | 7 | Sede final: IROS o CASE | PM | Formato del artículo |
 | 8 | Quiénes son los dos hablantes nativos que revisan el banco de comandos y anotan videos | Equipo | Condiciones S2, S3 y anotación ciega |
 | 9 | Fecha de Expoingenierías y qué se muestra | Equipo | Demo D5 |
-| 10 | Qué cámaras tiene la celda (número, posición, frecuencia, ¿hay de muñeca?) y cómo se leen | Laboratorio | Grabación de demos |
-| 11 | Cómo se le mandan comandos al xArm dentro de la celda (SDK directo, ROS 2, PLC) y si se permite modo servo | Laboratorio | Interfaz de control |
+| 10 | IP del controlador y resolución/frecuencia de las cámaras fijas de la celda | Laboratorio | Configuración |
 
 ## 5. Estado del software
 
@@ -57,7 +56,7 @@ Al 3 de noviembre el repositorio solo contenía `LICENSE`. El speedrun de Claude
 | Módulo | Estado (hecho / parcial / stub / pendiente) | Archivo | Prueba que lo demuestra |
 |---|---|---|---|
 | Esqueleto, CI, `CLAUDE.md` | pendiente | | |
-| Supervisor de seguridad | pendiente | | |
+| Límites mínimos (recorte de acciones, paro) | pendiente | | |
 | Driver xArm 6 + `MockXArm` | pendiente | | |
 | Cinemática desde URDF oficial | pendiente | | |
 | Teleoperación (GELLO / SpaceMouse) | pendiente | | |
@@ -79,7 +78,7 @@ Al 3 de noviembre el repositorio solo contenía `LICENSE`. El speedrun de Claude
 - [ ] Correr el speedrun y revisar su reporte; correr `uv run pytest` tú mismo.
 - [ ] Ir al laboratorio: confirmar modelo del brazo, pinza, IP del controlador y firmware.
 - [ ] Probar `scripts/xarm_check.py` **con alguien presente y el paro de emergencia en la mano**.
-- [ ] Revisar las cámaras de la celda: que se puedan leer desde la laptop y grabar sincronizadas. Decidir si hace falta una de muñeca.
+- [ ] Imprimir el soporte y montar la cámara de muñeca; verificar que se lee junto con las cámaras fijas de la celda y se graban sincronizadas.
 - [ ] Conocer el procedimiento de seguridad de la celda (paro, reinicio, acceso) antes de la primera ejecución.
 - [ ] Pedir las piezas de teleoperación.
 
@@ -119,7 +118,7 @@ Al 3 de noviembre el repositorio solo contenía `LICENSE`. El speedrun de Claude
 Resumen; la versión completa está en `docs/SAFETY.md`.
 - Nunca solo: dos personas en cualquier ejecución autónoma.
 - Se siguen las reglas de seguridad de la celda. Paro de emergencia de la celda en la mano; nadie dentro durante un ensayo.
-- La seguridad de la celda protege a las personas, no al equipo: el modo reducido y la caja del TCP en el controlador, más el supervisor en software, siguen siendo obligatorios.
+- Al conectar, dejar activos en el controlador la detección de colisión, la velocidad reducida y la caja del TCP. Es el mínimo para que un error del VLA no choque el brazo contra la mesa o la cámara de muñeca.
 - Toda política nueva se prueba primero a velocidad mínima.
 - El sistema no está certificado (ISO 10218, ISO/TS 15066); no lo describas como seguro para colaboración.
 

@@ -10,13 +10,13 @@ Eres el ingeniero de software principal del proyecto SABER. Tu trabajo en esta s
 
 1. Lee completo `docs/PROPUESTA.md`. Es la fuente de verdad para tareas, condiciones de lenguaje, sistemas S0–S4, compuertas base, métricas, hipótesis y plan de análisis. Si algo de este prompt contradice la propuesta, gana la propuesta y lo anotas en `docs/DECISIONS.md`.
 2. El repositorio hoy solo tiene `LICENSE` (MIT). Todo lo demás lo creas tú.
-3. Hardware objetivo: uFactory xArm 6 **fijo dentro de una celda** que ya tiene cámaras montadas y seguridad perimetral, y una laptop con RTX 5060 para inferencia. No hay base móvil ni AGV: no escribas nada de movilidad. La configuración de cámaras de la celda no se conoce todavía, así que el número y nombre de las vistas debe ser configurable por YAML. **No tienes acceso al robot.** Todo debe funcionar con un robot simulado (`MockXArm`) y con datos sintéticos.
+3. Hardware objetivo: uFactory xArm 6 (confirmado) **fijo dentro de una celda** con seguridad perimetral, controlado **directo por IP con el xArm-Python-SDK**; cámaras fijas de la celda más **una cámara USB de muñeca**; y una laptop con RTX 5060 para inferencia. No hay base móvil ni AGV: no escribas nada de movilidad. La configuración de cámaras de la celda no se conoce todavía, así que el número y nombre de las vistas debe ser configurable por YAML. **No tienes acceso al robot.** Todo debe funcionar con un robot simulado (`MockXArm`) y con datos sintéticos.
 
 ## Reglas no negociables
 
 - **Nunca inventes resultados.** No escribas números de éxito, AUROC ni latencias en documentos como si fueran medidos. Los fixtures sintéticos se marcan como sintéticos en el nombre del archivo y en el código.
 - **Nunca inventes parámetros del robot.** La cinemática del xArm 6 sale del URDF oficial de uFactory (repositorio `xarm_ros2`) o de la función de cinemática directa del `xArm-Python-SDK`. Si no puedes descargarlos, deja la interfaz con un `NotImplementedError` claro y una prueba marcada `skip`, y regístralo en `docs/HANDOFF.md`.
-- **Nunca escribas código que mueva el robot real sin pasar por el supervisor de seguridad.** El driver real debe exigir un flag explícito (`--i-am-supervising`) y arrancar en modo reducido.
+- **Lo importante es el VLA.** No sobreconstruyas la capa de seguridad: basta con configurar al conectar la detección de colisión, la velocidad reducida y la caja del TCP en el controlador, y recortar cada acción a límites articulares y a un salto máximo por paso. El driver real exige un flag explícito (`--i-am-supervising`) para mover el brazo.
 - **Verifica APIs antes de usarlas.** Para LeRobot, SmolVLA, xArm-Python-SDK, Whisper y LIBERO: instala la versión, inspecciona el código o la documentación y fija versiones en `pyproject.toml`. Si una API no existe como esperabas, adáptate y anótalo en `docs/DECISIONS.md`.
 - Haz un commit por fase con mensaje claro. **No hagas push** sin que el usuario lo pida.
 - Si una fase te bloquea más de ~30 minutos de intentos, déjala con stubs documentados y sigue con la siguiente.
@@ -27,7 +27,7 @@ Eres el ingeniero de software principal del proyecto SABER. Tu trabajo en esta s
 ```
 saber/
   robots/xarm6/      driver LeRobot-compatible, MockXArm, cinemática, config
-  safety/            supervisor (independiente del modelo)
+  safety/            límites mínimos (recorte de acciones y paro)
   cameras/           lectura y sincronización de las cámaras de la celda
   teleop/            adaptadores GELLO, SpaceMouse, teclado → acciones
   record/            grabación a LeRobotDataset (o formato compatible)
@@ -53,13 +53,13 @@ Crea una lista de tareas con estas fases y márcalas al avanzar. Cada fase termi
 - `CLAUDE.md` con: qué es el proyecto, comandos para instalar y probar, mapa del repositorio, las reglas no negociables de arriba y "lee `docs/HANDOFF.md` antes de trabajar".
 - **Aceptación:** `uv sync && uv run pytest` pasa en una máquina sin GPU.
 
-### Fase 1. Seguridad y driver del xArm 6
-- `safety/supervisor.py`: límites articulares, caja cartesiana del TCP, tope de velocidad y aceleración por paso, rechazo de saltos, watchdog de latencia y de cámara, paro. Configurable por YAML. Pruebas unitarias exhaustivas, incluidas propiedades (hypothesis): ninguna acción que sale del supervisor viola un límite.
-- `robots/xarm6/`: clase `Robot` compatible con la interfaz de la versión fijada de LeRobot, sobre el xArm-Python-SDK. Espacio de acción: 6 articulaciones + pinza. Al conectar: modo reducido, sensibilidad de colisión alta y límites del TCP en el controlador (verifica los nombres de las funciones en el SDK instalado).
+### Fase 1. Conexión al xArm 6 (rápida; no es el foco)
+- `robots/xarm6/`: clase `Robot` delgada compatible con la interfaz de la versión fijada de LeRobot, sobre el xArm-Python-SDK por IP (configurable). Espacio de acción: 6 articulaciones + pinza; lazo cerrado en modo servo. Al conectar: detección de colisión, velocidad reducida y caja del TCP en el controlador (verifica los nombres de las funciones en el SDK instalado).
+- `safety/limits.py`: recorte a límites articulares y salto máximo por paso, y paro si la política no responde. Configurable por YAML, con pruebas unitarias cortas.
 - `MockXArm` con la misma interfaz, cinemática real y cámaras sintéticas.
-- `cameras/`: lector genérico de las cámaras de la celda (OpenCV / V4L2 y, si aplica, RTSP o ROS 2), con sincronización por marca de tiempo y número de vistas configurable.
+- `cameras/`: lector de la cámara USB de muñeca y de las cámaras fijas de la celda (OpenCV / V4L2; RTSP si alguna es IP), con sincronización por marca de tiempo y número de vistas configurable.
 - `scripts/xarm_check.py`: conecta, lee estado, mueve una articulación 2° a velocidad mínima solo con `--i-am-supervising`.
-- `docs/SAFETY.md`: protocolo de sesión dentro de la celda (checklist previo, paro de la celda, reinicio, regla de dos personas), dejando huecos marcados `TODO(celda)` para el procedimiento propio de la celda.
+- `docs/SAFETY.md`: checklist corto de sesión (paro de la celda a la mano, configuración del controlador, primera ejecución de cada política a velocidad mínima).
 
 ### Fase 2. Teleoperación y grabación
 - Adaptadores de teleoperación con interfaz común: GELLO (mapeo articular), SpaceMouse (cartesiano + IK) y teclado (solo para depuración).
@@ -76,7 +76,7 @@ Crea una lista de tareas con estas fases y márcalas al avanzar. Cada fase termi
 - `policies/smolvla.py`: carga, inferencia por trozos, muestreo de S trozos por instrucción reutilizando el prefijo si la API lo permite (si no, documenta el costo real).
 - `policies/act.py` y `policies/parser_act.py` para el sistema S4 (analizador de reglas sobre el vocabulario fijo + una política ACT por objeto).
 - Scripts de ajuste fino para correr en GPU rentada, con configs y estimación de horas. No los ejecutes.
-- Script de inferencia en vivo con supervisor, compuerta opcional y registro completo de cada decisión.
+- Script de inferencia en vivo con límites mínimos, compuerta opcional y registro completo de cada decisión.
 
 ### Fase 5. Compuerta IMG y bases
 - `gate/img.py`: exactamente lo de la sección 2.2.2 de la propuesta. Característica φ por cinemática directa, agrupamiento con radio relativo a la dispersión intracandidata, m*, H_B, R, arbitraje por grupo modal, pregunta de aclaración en español con los dos objetivos más probables.
