@@ -154,3 +154,62 @@ Verified by downloading the wheels (`pip download --no-deps`) and reading the so
   that start depends on scores only, not labels. CRC on the joint rate P(wrong ∧ executed) is
   provided for comparison. Both are checked by Monte Carlo on synthetic data in
   `tests/test_gate.py`; these are checks of the procedures, not results.
+
+## D7. Evaluation and statistics (Phase 6)
+
+### Power check of "40 paired trials detect ~30 points with 80 % power" (PROPUESTA 2.3.7)
+
+Computed with `scripts/power_sim.py` (exact power of the two-sided exact McNemar test,
+alpha = 0.05, cross-checked by Monte Carlo with 20 000 draws per row). This is a property of the
+test, not an experimental result. Power depends on P(discordant pair), i.e. on how correlated
+the two systems' outcomes are on the same scene, which is unknown until the pilot.
+
+| p_A | p_B | dependence | P(discordant) | power (exact) | power (MC) | pairs for 80 % |
+|---|---|---|---|---|---|---|
+| 0.1 | 0.4 | min_discordance | 0.300 | 0.991 | 0.991 | 25 |
+| 0.1 | 0.4 | midway | 0.360 | 0.915 | 0.918 | 31 |
+| 0.1 | 0.4 | independent | 0.420 | 0.839 | 0.838 | 37 |
+| 0.2 | 0.5 | min_discordance | 0.300 | 0.991 | 0.991 | 25 |
+| 0.2 | 0.5 | midway | 0.400 | 0.863 | 0.859 | 36 |
+| 0.2 | 0.5 | independent | 0.500 | 0.742 | 0.745 | 46 |
+| 0.3 | 0.6 | min_discordance | 0.300 | 0.991 | 0.992 | 25 |
+| 0.3 | 0.6 | midway | 0.420 | 0.839 | 0.833 | 37 |
+| 0.3 | 0.6 | independent | 0.540 | 0.696 | 0.692 | 50 |
+| 0.4 | 0.7 | min_discordance | 0.300 | 0.991 | 0.992 | 25 |
+| 0.4 | 0.7 | midway | 0.420 | 0.839 | 0.840 | 37 |
+| 0.4 | 0.7 | independent | 0.540 | 0.696 | 0.693 | 50 |
+| 0.5 | 0.8 | min_discordance | 0.300 | 0.991 | 0.991 | 25 |
+| 0.5 | 0.8 | midway | 0.400 | 0.863 | 0.863 | 36 |
+| 0.5 | 0.8 | independent | 0.500 | 0.742 | 0.748 | 46 |
+| 0.6 | 0.9 | min_discordance | 0.300 | 0.991 | 0.992 | 25 |
+| 0.6 | 0.9 | midway | 0.360 | 0.915 | 0.914 | 31 |
+| 0.6 | 0.9 | independent | 0.420 | 0.839 | 0.841 | 37 |
+
+**Verdict: the claim holds only partially.** With 40 pairs the power for a 30-point gain is
+≥ 0.84 when paired outcomes are moderately or strongly positively correlated (discordance
+≤ ~0.42), but drops to **0.70–0.74** when outcomes are independent and the baseline is
+between 0.2 and 0.5, where **46–50 pairs** are needed for 80 %. Recommendation (for the human
+to decide before G0): estimate the discordance in the pilot and either raise the key cells to
+~50 pairs or state the claim as "≈ 30 points with 70–99 % power depending on dependence".
+Phase B already plans n ≥ 100 for key cells.
+
+### Other decisions
+
+- AUROC = P(score of a correct decision > score of a wrong one), ties ½ (Mann-Whitney).
+  AURC = mean selective risk over coverage k/n, tied scores entering together.
+- ODPB: one shared set of policy samples per decision point gives S0 (raw), S1 (top candidate)
+  and IMG decisions. Baseline gates score the S1 decision; IMG scores its own (modal) decision.
+  A1/O1 are excluded from the ODPB (no "closer to the true target" label). Rows where the
+  interpreter outputs only NONE count as S1/IMG abstentions and are excluded from AUROC.
+- Cluster bootstrap resamples whole scenes (episodes) with replacement; percentile CI.
+- Trial generator: one scene list per condition shared by every system running it (pairing);
+  S0's NOINSTR / SHUFFLED controls reuse the E0 scenes; V1/V2 speak S2 utterances; A1 scenes add
+  the precision pliers. Real trials randomize the target over **all five zones** (held-out
+  zones are a property of the demo data / ODPB, not of the real trials) — confirm with the PM.
+  V2 SNR levels default to **10 dB and 0 dB: a proposal, not in PROPUESTA**; confirm before
+  freezing the prereg.
+- Blocks: block i = the i-th trial of every (system, condition) cell, shuffled; 40 blocks.
+- The annotator sheet only has an anonymous video code, the target and the placement.
+- `scripts/make_synthetic_data.py` produces a full *_SYNTHETIC data set (random Dirichlet
+  outcome probabilities per cell, a deliberately noisy SYNTHETIC interpreter) only to exercise
+  the analysis code; `report.py` stamps every figure "SYNTHETIC".
