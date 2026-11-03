@@ -1,0 +1,14 @@
+# System S4: one ACT policy per object, trained only on the wrench training episodes (no language).
+# Episodes are selected with --dataset.episodes from meta/saber_episodes.jsonl (filter_goal).
+policy: act
+init_from: null
+dataset_repo_id: local/saber_t1
+dataset_root: data/datasets/t1
+filter_goal: wrench
+steps: 50000
+batch_size: 8
+save_freq: 10000
+device: cuda
+output_dir: outputs/train/act_xarm6_wrench
+extra_args: []
+reference: null      # no published time reference we could verify; measure on the first run

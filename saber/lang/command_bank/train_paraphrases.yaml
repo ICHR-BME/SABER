@@ -1,0 +1,27 @@
+# Spanish / Spanglish TRAINING paraphrases for system S3 (relabelled fine-tune).
+# Must never overlap the evaluation bank (phase_a.yaml); scripts/relabel_dataset.py checks it.
+# ALL DRAFTS: status draft_needs_native_review.
+status: draft_needs_native_review
+drafted_by: claude-opus-5-5 (LLM draft, 2026-11-03)
+paraphrases:
+  screwdriver:
+    - Recoge el destornillador y llévalo a la charola
+    - Quiero el desarmador dentro de la charola
+    - Lleva el desarmador hasta la charola
+    - Mete el screwdriver en la bandeja
+    - Deja el desarmador en la charola, porfa
+    - Agarra el desarmador y déjalo en la bandeja
+  pliers:
+    - Recoge las pinzas y llévalas a la charola
+    - Quiero las pinzas dentro de la charola
+    - Lleva las pinzas hasta la charola
+    - Mete las pliers en la bandeja
+    - Deja las pinzas en la charola, porfa
+    - Agarra las pinzas y déjalas en la bandeja
+  wrench:
+    - Recoge la llave y llévala a la charola
+    - Quiero la llave dentro de la charola
+    - Lleva la llave hasta la charola
+    - Mete el wrench en la bandeja
+    - Deja la llave en la charola, porfa
+    - Agarra la llave y déjala en la bandeja

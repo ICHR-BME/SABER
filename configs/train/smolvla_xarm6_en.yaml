@@ -1,0 +1,15 @@
+# SmolVLA fine-tune on the xArm 6 T1 demos, English-only instructions (systems S0-S2).
+# Run on a rented GPU: uv run --extra lerobot python scripts/train_policy.py configs/train/smolvla_xarm6_en.yaml --run
+policy: smolvla
+init_from: lerobot/smolvla_base          # verified on the HF Hub (2026-11-03)
+dataset_repo_id: local/saber_t1
+dataset_root: data/datasets/t1           # LeRobotDataset (convert npz with saber.record.writer.npz_to_lerobot)
+steps: 20000
+batch_size: 64
+save_freq: 5000
+device: cuda
+output_dir: outputs/train/smolvla_xarm6_en
+extra_args: []
+# Time reference (NOT measured by us): LeRobot's SmolVLA docs state ~4 h for 20k steps on one
+# A100 (batch 64). The estimate below scales that linearly; measure on the first real run.
+reference: {gpu: A100, steps: 20000, batch_size: 64, hours: 4.0}

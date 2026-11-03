@@ -1,0 +1,13 @@
+# System S3: SmolVLA fine-tuned on the same demos relabelled with Spanish / Spanglish paraphrases.
+# The relabelled dataset is produced with scripts/relabel_dataset.py (training-split paraphrases only).
+policy: smolvla
+init_from: lerobot/smolvla_base
+dataset_repo_id: local/saber_t1_es_relabel
+dataset_root: data/datasets/t1_es_relabel
+steps: 20000
+batch_size: 64
+save_freq: 5000
+device: cuda
+output_dir: outputs/train/smolvla_xarm6_es_relabel
+extra_args: []
+reference: {gpu: A100, steps: 20000, batch_size: 64, hours: 4.0}

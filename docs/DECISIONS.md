@@ -93,3 +93,30 @@ Verified by downloading the wheels (`pip download --no-deps`) and reading the so
   must not be reported as a result.
 - Pilot candidate models: existence on the Hub checked, nothing about quality is assumed.
   Gemma 3 and Llama 3.2 are gated.
+
+## D5. Policies (Phase 4)
+
+- **Shared prefix for S samples.** lerobot 0.4.4 has no public "S samples from one prefix"
+  API. `SmolVLAChunkPolicy._sample_shared_prefix` re-implements
+  `VLAFlowMatching.sample_actions`: one prefix pass fills the KV cache (dict per layer with
+  `key_states` / `value_states`, batch first), the cache is `expand`ed to batch S, then
+  `num_steps` denoising steps run on a batch of S. **Real cost per candidate: 1 prefix pass +
+  `num_steps` expert passes (batched over S)**; with K candidates: K prefix passes + K·num_steps
+  batched expert passes. PROPUESTA 2.2.2 writes "K·S expert passes"; the actual number of
+  expert forward calls is K·num_steps (each on S samples), num_steps = 10 in the public
+  configs. Not run yet (needs a checkpoint + GPU); `share_prefix=False` falls back to S full
+  passes. **Latency is not measured.**
+- The pooled prefix hidden state (mean over valid prefix tokens) is returned for G-int.
+- ACT (lerobot) has no language input and is deterministic at inference: S samples = S copies.
+- S4 parser = closed lexicon; asks in Spanish when "pinzas" is ambiguous, refuses unknown objects.
+- S1 abstains when the interpreter itself answers NONE (canonicalization has nothing to send);
+  this is reported as S1 abstention, separate from gate abstention in S2.
+- Training is never run here. `scripts/train_policy.py` builds the `lerobot-train` command
+  (`--policy.path=lerobot/smolvla_base`, `--dataset.episodes` restricted to the training split
+  and, for S4, to one goal). Time estimate: linear scaling of the LeRobot docs statement
+  quoted in PROPUESTA 2.2.5 (~4 h for 20k steps on one A100); ACT has no verified reference and
+  prints "unknown".
+- S3 relabel uses a separate draft paraphrase list (`train_paraphrases.yaml`) and refuses any
+  paraphrase that appears in the evaluation bank.
+- `SyntheticPolicy` is an explicit caricature for tests (understands only English nouns, else
+  a language-blind per-scene guess). It says nothing about SmolVLA's real behaviour.
