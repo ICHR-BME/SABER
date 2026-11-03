@@ -31,6 +31,7 @@ MOCK_START_DEG = np.array([0.0, -20.0, -40.0, 0.0, 60.0, 0.0])
 # Mock gripper units (SYNTHETIC; the real xArm Gripper range must be confirmed on the device).
 MOCK_GRIPPER_OPEN = 850.0
 MOCK_GRIPPER_CLOSED = 0.0
+GRASP_RADIUS_M = 0.03
 
 
 @dataclass
@@ -228,6 +229,7 @@ class MockXArm(XArm6):
         config = config or mock_config()
         self.sdk = MockXArmSDK(tcp_offset=np.asarray(config.tcp_offset_m, dtype=float))
         self.object_positions: dict[str, np.ndarray] = dict(object_positions or {})
+        self.attached: str | None = None
         rig: CameraRig = build_rig(config.cameras, scene_state=self._scene_state)
         super().__init__(
             config,
@@ -244,3 +246,25 @@ class MockXArm(XArm6):
     def set_joints(self, q: np.ndarray) -> None:
         """Teleport the simulated arm (tests / episode reset only)."""
         self.sdk.joints = np.asarray(q, dtype=float).copy()
+
+    def reset_scene(self, object_positions: dict[str, np.ndarray], q: np.ndarray | None = None) -> None:
+        self.object_positions = {k: np.asarray(v, dtype=float).copy() for k, v in object_positions.items()}
+        self.attached = None
+        self.set_joints(np.deg2rad(MOCK_START_DEG) if q is None else q)
+
+    def send_action(self, action: dict[str, float]) -> dict[str, float]:
+        """Real driver path, plus a crude SYNTHETIC grasp model: closing the gripper within
+        ``GRASP_RADIUS_M`` of an object attaches it to the TCP; opening releases it."""
+        sent = super().send_action(action)
+        tcp = tcp_position(self.sdk.joints, self.sdk.tcp_offset)
+        closed = sent["gripper.pos"] >= 0.5
+        if closed and self.attached is None and self.object_positions:
+            name = min(self.object_positions, key=lambda k: np.linalg.norm(self.object_positions[k] - tcp))
+            if np.linalg.norm(self.object_positions[name] - tcp) < GRASP_RADIUS_M:
+                self.attached = name
+        if self.attached is not None:
+            if closed:
+                self.object_positions[self.attached] = tcp.copy()
+            else:
+                self.attached = None
+        return sent

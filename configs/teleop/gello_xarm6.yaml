@@ -1,0 +1,10 @@
+# GELLO for xArm 6. Fill in after building the device; offsets come from calibration
+# (python scripts/record_demos.py --calibrate-gello) with the arm and GELLO in the same pose.
+port: COM5            # Windows example; Linux: /dev/ttyUSB0
+baudrate: 57600       # confirm the servo baud rate you configured
+joint_ids: [1, 2, 3, 4, 5, 6]
+gripper_id: 7
+signs: [1, 1, 1, 1, 1, 1]   # flip per joint if the GELLO joint turns the other way
+offsets_rad: null
+gripper_open_tick: null
+gripper_closed_tick: null
