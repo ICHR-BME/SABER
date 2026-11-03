@@ -233,3 +233,16 @@ Phase B already plans n ≥ 100 for key cells.
   the chunk + final gripper (no FK); the gate runs only at t = 0 in simulation.
 - `bash scripts/gpu_libero.sh` installs and runs everything on a Linux GPU; it exits without a
   GPU. LIBERO / robosuite are Linux-only, so the `sim` extra is marked `sys_platform == 'linux'`.
+
+## D9. Preregistration and hand-off (Phase 8)
+
+- `prereg/analysis_plan.yaml` formalizes H1-H5 from PROPUESTA 2.1 / Appendix D. Choices that go
+  beyond the proposal are listed under `open_items` and block `freeze_prereg.py --freeze`:
+  H1 "within 15 points" as an upper Wilson bound vs NOINSTR + 0.15; target accuracy =
+  (ok + fail) / N; V2 SNR levels; n per cell (power, D7); H2 formal-Spanish cell missing from the
+  real S1 trials (PROPUESTA 2.3.3 lists E0, S2, S3, V1, V2 for S1, but H2 is about formal
+  Spanish); V2 in the ODPB needs recorded speech.
+- The hash canonicalizes the YAML (comments / line endings do not change it) and normalizes line
+  endings of `hypotheses.md`. The speedrun did **not** freeze the plan.
+- `docs/SAFETY.md` and `docs/SETUP.md` are in Spanish (they are used by the lab operators);
+  `docs/DECISIONS.md` and code stay in English.

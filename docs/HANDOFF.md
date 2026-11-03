@@ -1,7 +1,7 @@
 # SABER: Documento de traspaso
 
 Para: el integrante del equipo que continúa el proyecto, y para su asistente de IA.
-De: Ian Carlos Hernández Robles · Última actualización: 3 de noviembre de 2026
+De: Ian Carlos Hernández Robles · Última actualización: 3 de noviembre de 2026 (tabla de la sección 5 y tareas 6.0 llenadas por el speedrun)
 
 > **Instrucciones para el asistente (Claude u otro):** este archivo es tu punto de partida. Antes de proponer o escribir nada, lee en este orden: (1) este documento completo, (2) `docs/PROPUESTA.md`, (3) `CLAUDE.md` y `docs/DECISIONS.md` si existen. La propuesta es la fuente de verdad del diseño experimental. No inventes resultados, parámetros del robot ni fechas; si algo no está aquí ni en la propuesta, pregunta al usuario. Toda ejecución en el robot real requiere a un humano presente con el paro de la celda a la mano.
 
@@ -20,7 +20,8 @@ Los modelos visión-lenguaje-acción (VLA) abiertos se entrenan casi solo en ing
 | `SABER_Revision_Literatura.pdf` | Revisión de literatura 2022–2026 y matriz de brechas | Vigente; hay entradas † por completar |
 | `SABER_Slide.pptx` | Lámina de resumen | Desactualizada: dice SO-101 y USD 400–750, y no aclara que 98 % → 11 % es simulación |
 | `docs/SPEEDRUN_PROMPT.md` | Prompt para que Claude Code construya el software | Usar una vez; luego revisar resultados |
-| `CLAUDE.md`, `docs/DECISIONS.md`, `docs/SAFETY.md`, `docs/SETUP.md` | Los crea el speedrun | Ver sección 5 |
+| `CLAUDE.md`, `docs/DECISIONS.md`, `docs/SAFETY.md`, `docs/SETUP.md` | Guía del repo, decisiones y APIs verificadas, checklist de seguridad, instalación | Creados por el speedrun (3 nov 2026) |
+| `prereg/` | Hipótesis y plan de análisis | Borrador, **no congelado** |
 
 Repositorio: `github.com/ICHR-BME/SABER` (licencia MIT).
 
@@ -51,27 +52,43 @@ Repositorio: `github.com/ICHR-BME/SABER` (licencia MIT).
 
 ## 5. Estado del software
 
-Al 3 de noviembre el repositorio solo contenía `LICENSE`. El speedrun de Claude Code (`docs/SPEEDRUN_PROMPT.md`) debe llenar esta tabla al terminar. **Si sigue vacía, el speedrun no se ha corrido o no terminó.** Verifica cada fila con su prueba; no confíes en la palabra "hecho".
+Al 3 de noviembre el repositorio solo contenía `LICENSE`. El speedrun de Claude Code (`docs/SPEEDRUN_PROMPT.md`) se corrió el 3 de noviembre de 2026 y llenó esta tabla. Verifica cada fila con su prueba; no confíes en la palabra "hecho". **Todo se probó solo con `MockXArm` y datos sintéticos, en CPU: nada se ha corrido contra el robot, una GPU, un modelo descargado ni LIBERO.** Los detalles y desviaciones están en `docs/DECISIONS.md`.
+
+"Hecho" = implementado y probado sin hardware. "Parcial" = implementado, pero su parte principal solo se puede verificar con hardware/GPU/modelos. "Stub" = interfaz sin implementación.
 
 | Módulo | Estado (hecho / parcial / stub / pendiente) | Archivo | Prueba que lo demuestra |
 |---|---|---|---|
-| Esqueleto, CI, `CLAUDE.md` | pendiente | | |
-| Límites mínimos (recorte de acciones, paro) | pendiente | | |
-| Driver xArm 6 + `MockXArm` | pendiente | | |
-| Cinemática desde URDF oficial | pendiente | | |
-| Teleoperación (GELLO / SpaceMouse) | pendiente | | |
-| Grabación a LeRobotDataset | pendiente | | |
-| Banco de comandos (borrador) | pendiente | | |
-| ASR n-best + mezcla de ruido | pendiente | | |
-| Intérprete K candidatas | pendiente | | |
-| Envolturas SmolVLA / ACT / analizador | pendiente | | |
-| IMG + compuertas base + calibración | pendiente | | |
-| ODPB, métricas, estadística, simulador de potencia | pendiente | | |
-| Generador de ensayos y hojas de captura | pendiente | | |
-| LIBERO-Goal en español | pendiente | | |
-| Preregistro | pendiente | | |
+| Esqueleto, CI, `CLAUDE.md` | hecho | `pyproject.toml`, `uv.lock`, `.github/workflows/ci.yml`, `CLAUDE.md` | `uv sync && uv run pytest` (76 pasan, 3 se saltan sin extras) |
+| Límites mínimos (recorte de acciones, paro) | hecho | `saber/safety/limits.py`, `configs/safety/xarm6_minimal.yaml` | `tests/test_safety_cameras.py` |
+| Driver xArm 6 + `MockXArm` | parcial: probado contra un SDK simulado con los mismos nombres de función; falta probar en el brazo | `saber/robots/xarm6/driver.py`, `mock.py`, `lerobot_compat.py`, `scripts/xarm_check.py` | `tests/test_xarm6.py` |
+| Cinemática desde URDF oficial | hecho (parámetros copiados de `xarm_ros2` @ `ac736c9`; verificar contra la FK del controlador con `xarm_check.py`) | `saber/robots/xarm6/kinematics.py`, `data/xarm6_official.yaml` | `tests/test_xarm6.py::test_fk_zero_pose_matches_known_flange_position` |
+| Cámaras (muñeca + celda, sincronización) | parcial: lector OpenCV/RTSP sin probar con cámaras reales | `saber/cameras/`, `configs/cameras/cell.yaml` | `tests/test_safety_cameras.py` |
+| Teleoperación (GELLO / SpaceMouse) | parcial: mapeos probados con lectores falsos; sin hardware | `saber/teleop/` | `tests/test_teleop_record.py` |
+| Grabación a LeRobotDataset | parcial: npz compatible probado de extremo a extremo; escritor `LeRobotDataset` sin correr (necesita el extra `lerobot`) | `saber/record/`, `scripts/record_demos.py` | `tests/test_teleop_record.py::test_end_to_end_synthetic_recording` |
+| Banco de comandos (borrador) | hecho como borrador: 183 enunciados, todos `draft_needs_native_review` | `saber/lang/command_bank/phase_a.yaml` | `tests/test_lang.py::test_bank_complete_and_all_drafts` |
+| ASR n-best + mezcla de ruido | parcial: n-best probado con un Whisper falso; mezclador exacto | `saber/lang/asr.py` | `tests/test_lang.py` |
+| Intérprete K candidatas | parcial: backend de reglas probado; backend Hugging Face sin correr; piloto listo | `saber/lang/interpreter.py`, `scripts/interpreter_pilot.py` | `tests/test_lang.py` |
+| Envolturas SmolVLA / ACT / analizador | parcial: analizador + S4 probados; SmolVLA (prefijo compartido) y ACT escritos contra el código de lerobot 0.4.4 pero **sin ejecutar** | `saber/policies/`, `saber/live.py`, `scripts/run_live.py`, `scripts/train_policy.py` | `tests/test_policies.py` |
+| IMG + compuertas base + calibración | hecho (G-pert: stub de Fase B) | `saber/gate/` | `tests/test_gate.py` |
+| ODPB, métricas, estadística, simulador de potencia | hecho (probado con datos sintéticos) | `saber/eval/`, `scripts/build_odpb.py`, `calibrate_gate.py`, `power_sim.py`, `report.py` | `tests/test_eval.py` |
+| Generador de ensayos y hojas de captura | hecho (800 ensayos, hoja ciega para anotadores) | `saber/eval/trials.py`, `scripts/make_trials.py` | `tests/test_eval.py::test_trials_total_pairing_and_blocks` |
+| LIBERO-Goal en español | parcial: traducciones (es/pt/fr/de, borrador) y evaluador escritos; **sin ejecutar** (necesita Linux + GPU) | `saber/sim/libero/`, `scripts/eval_libero.py`, `scripts/gpu_libero.sh` | `tests/test_libero.py` |
+| Preregistro | hecho como borrador, **no congelado** (tiene `open_items`) | `prereg/`, `scripts/freeze_prereg.py` | `tests/test_prereg.py` |
 
 ## 6. Lo que tiene que hacer un humano (Claude no puede)
+
+### 6.0 Tareas nuevas que encontró el speedrun (3 nov)
+- [ ] **Medir y llenar los valores de la celda** (hoy en `null` a propósito; el driver y la grabación se niegan a correr sin ellos): IP, posiciones abierta/cerrada de la pinza, sensibilidad de colisión, velocidad TCP reducida y caja del TCP en `configs/robot/xarm6_cell.yaml`; centros de las cinco zonas y de la charola en `configs/scene/phase_a.yaml` (las coordenadas actuales son sintéticas).
+- [ ] Confirmar con `xarm_check.py` que la FK del URDF y la FK del controlador coinciden con la pinza montada (offset del TCP = 0.172 m según el URDF de la xArm Gripper).
+- [ ] En la laptop: `uv sync --extra lerobot` y comprobar que `torch.cuda.is_available()` es `True` con la RTX 5060 (se instala torch 2.10 + cu128).
+- [ ] Correr una vez SmolVLA con `SmolVLAChunkPolicy` en GPU: verificar que el muestreo con prefijo compartido da trozos con la misma distribución que `predict_action_chunk` y medir la latencia real (no hay ninguna latencia medida todavía).
+- [ ] **Potencia:** el simulador muestra que 40 pares detectan 30 puntos con 80 % solo si los resultados de los dos sistemas están correlacionados; con independencia la potencia baja a 0.70–0.74 y hacen falta 46–50 pares (`docs/DECISIONS.md`, D7). Decidir n por celda antes de G0.
+- [ ] **H2** pide español formal (condición S1), pero los ensayos reales de S1 son E0, S2, S3, V1 y V2: agregar una celda o evaluar esa parte de H2 en el ODPB.
+- [ ] Elegir las dos SNR de V2 (el generador usa 10 dB y 0 dB como propuesta) y resolver los demás `open_items` de `prereg/analysis_plan.yaml`; después congelar con `uv run python scripts/freeze_prereg.py --freeze`.
+- [ ] Correr el piloto del intérprete (`scripts/interpreter_pilot.py --config configs/interp/pilot_candidates.yaml`, necesita GPU y descargar modelos; Gemma y Llama piden aceptar licencia).
+- [ ] Revisión nativa de: el banco de comandos, `train_paraphrases.yaml` (S3) y las traducciones de LIBERO-Goal.
+- [ ] Confirmar el modelo de servos del GELLO (el código asume Dynamixel serie X).
+- [ ] En una GPU rentada: `bash scripts/gpu_libero.sh` y revisar si `lerobot/smolvla_libero` sirve para LIBERO-Goal (no se verificó su desempeño).
 
 ### 6.1 Esta semana (3–9 nov)
 - [ ] Resolver las decisiones abiertas 1–5.

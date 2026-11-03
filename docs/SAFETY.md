@@ -1,42 +1,42 @@
-# Safety checklist for xArm 6 sessions
+# Checklist de seguridad para sesiones con el xArm 6
 
-Short on purpose. The cell provides perimeter safety (e-stop and access guarding). SABER adds only
-the minimum so that a wrong VLA action does not crash the arm (PROPUESTA 2.2.5). **Nothing here is
-certified** (not ISO 10218, not ISO/TS 15066). Do not describe the system as collaborative-safe.
+Corto a propósito. La celda aporta la seguridad perimetral (paro de emergencia y protección de
+acceso). SABER agrega solo lo mínimo para que una acción equivocada del VLA no choque el brazo
+(PROPUESTA 2.2.5). **Nada de esto está certificado** (ni ISO 10218 ni ISO/TS 15066). No describas
+el sistema como seguro para colaboración.
 
-## Before the first session in the cell (once)
+## Antes de la primera sesión en la celda (una vez)
 
-- [ ] Learn the cell's own procedure: e-stop location, reset, access rules. Follow the cell rules.
-- [ ] Fill in every `null` in `configs/robot/xarm6_cell.yaml` with **measured** values:
-      controller IP, gripper open/closed positions, collision sensitivity, reduced TCP speed,
-      TCP box `[x_max, x_min, y_max, y_min, z_max, z_min]` (mm, base frame) that keeps the TCP
-      above the table and the wrist camera out of collisions. The driver refuses to connect while
-      any of these is `null`.
-- [ ] Narrow `configs/safety/xarm6_minimal.yaml` joint ranges to the cell if needed (they can
-      only be narrower than the official URDF limits).
-- [ ] Replace the synthetic zone coordinates in `configs/scene/phase_a.yaml` and set
-      `measured: true`.
+- [ ] Conocer el procedimiento propio de la celda: ubicación del paro, reinicio, reglas de acceso.
+- [ ] Llenar cada `null` de `configs/robot/xarm6_cell.yaml` con valores **medidos**: IP del
+      controlador, posiciones abierta/cerrada de la pinza, sensibilidad de colisión, velocidad TCP
+      reducida y caja del TCP `[x_max, x_min, y_max, y_min, z_max, z_min]` (mm, marco de la base)
+      que mantenga el TCP sobre la mesa y la cámara de muñeca sin choques. El driver no se conecta
+      mientras alguno siga en `null`.
+- [ ] Si hace falta, estrechar los rangos articulares en `configs/safety/xarm6_minimal.yaml` (solo
+      pueden ser más estrechos que los del URDF oficial).
+- [ ] Reemplazar las coordenadas sintéticas de `configs/scene/phase_a.yaml` y poner `measured: true`.
 
-## Every session
+## Cada sesión
 
-- [ ] Two people present for any autonomous run. One holds the cell e-stop at all times.
-- [ ] Nobody inside the workspace during a trial.
-- [ ] Read-only check: `uv run python scripts/xarm_check.py` (prints joints, TCP from URDF FK
-      and from the controller FK; they must agree within a few mm).
-- [ ] Motion check: `uv run python scripts/xarm_check.py --i-am-supervising --joint 6`
-      (moves joint 6 by 2 deg and back).
-- [ ] On connect the driver sets: collision detection sensitivity, reduced max TCP speed, TCP
-      box + fence mode, reduced mode on, servo mode. Confirm in the xArm Studio UI that reduced
-      mode and the boundary are active.
-- [ ] Software limits active on every action: joint clip, max step per control tick, gripper
-      clip, watchdog stop if the policy stops responding (`watchdog_timeout_s`).
-- [ ] **First run of every new policy (or new checkpoint) at minimum speed**: lower
-      `reduced_max_tcp_speed_mm_s` and `max_step_deg`, run E0 once, watch the full motion.
-- [ ] No soldering iron switched on in the cell (solder spool is a replica).
+- [ ] Dos personas en cualquier ejecución autónoma. Una sostiene el paro de la celda todo el tiempo.
+- [ ] Nadie dentro del espacio de trabajo durante un ensayo.
+- [ ] Revisión de solo lectura: `uv run --extra robot python scripts/xarm_check.py` (articulaciones,
+      TCP por FK del URDF y por FK del controlador; deben coincidir en pocos mm).
+- [ ] Revisión de movimiento: `uv run --extra robot python scripts/xarm_check.py --i-am-supervising --joint 6`
+      (mueve la articulación 6 dos grados y regresa).
+- [ ] Al conectar, el driver configura: sensibilidad de detección de colisión, velocidad TCP máxima
+      reducida, caja del TCP + modo cerca (fence), modo reducido activo y modo servo. Confirma en
+      xArm Studio que el modo reducido y la frontera están activos.
+- [ ] Límites en software en cada acción: recorte articular, salto máximo por paso, recorte de la
+      pinza y paro por watchdog si la política deja de responder (`watchdog_timeout_s`).
+- [ ] **La primera ejecución de cada política (o checkpoint) nueva, a velocidad mínima**: baja
+      `reduced_max_tcp_speed_mm_s` y `max_step_deg`, corre E0 una vez y observa todo el movimiento.
+- [ ] Nada de cautín encendido en la celda (el carrete de estaño es una réplica).
 
-## If something goes wrong
+## Si algo sale mal
 
-1. Press the cell e-stop.
-2. Write down what happened before touching anything (trial id, time, what the arm did).
-3. A trial with a hardware failure documented **before** the decision is repeated and reported;
-   it is never discarded because of its result (prereg exclusion rule).
+1. Presiona el paro de la celda.
+2. Anota lo que pasó antes de tocar nada (id del ensayo, hora, qué hizo el brazo).
+3. Un ensayo con falla de hardware documentada **antes** de la decisión se repite y se reporta;
+   nunca se descarta por su resultado (regla de exclusión del preregistro).
