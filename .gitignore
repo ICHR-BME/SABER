@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+outputs/
+data/raw/
+data/datasets/
+*.mp4
+*.wav
+!tests/fixtures/*.wav
+.env
+.DS_Store

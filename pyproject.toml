@@ -1,0 +1,81 @@
+[project]
+name = "saber"
+version = "0.1.0"
+description = "SABER: Spanish-Aware, Behavior-verified Execution for Robots (xArm 6 + SmolVLA)"
+readme = "CLAUDE.md"
+license = { text = "MIT" }
+requires-python = ">=3.10,<3.13"
+authors = [{ name = "Ian Carlos Hernandez Robles" }]
+# Core dependencies: everything needed to run the test-suite on a CPU-only
+# machine with MockXArm and synthetic data. Heavy/hardware deps live in extras.
+# opencv-python-headless is capped to stay compatible with lerobot==0.4.4.
+dependencies = [
+    "numpy>=1.26,<3",
+    "scipy>=1.11,<2",
+    "pyyaml>=6.0,<7",
+    "matplotlib>=3.8,<4",
+    "opencv-python-headless>=4.9,<4.13",
+]
+
+[project.optional-dependencies]
+# Real xArm 6 over IP. Version verified by inspecting the wheel (see docs/DECISIONS.md).
+robot = ["xarm-python-sdk==1.18.4"]
+# Teleoperation devices. dynamixel-sdk range follows lerobot[dynamixel].
+teleop = [
+    "dynamixel-sdk>=3.7.31,<3.9",
+    "pyspacemouse==2.1.0",
+    "pynput>=1.7.7,<1.9",
+]
+# Speech recognition (n-best via several decodings).
+asr = ["faster-whisper==1.2.1"]
+# LeRobot + SmolVLA/ACT policies and LeRobotDataset recording.
+lerobot = ["lerobot[smolvla]==0.4.4"]
+# Local Hugging Face interpreter (LLM/VLM). transformers range follows lerobot[smolvla].
+interp = ["transformers>=4.57.1,<5", "accelerate>=1.10,<2", "torch>=2.2.1,<2.11"]
+# LIBERO-Goal simulation (Linux only: LIBERO/robosuite do not support Windows).
+sim = ["lerobot[smolvla,libero]==0.4.4; sys_platform == 'linux'"]
+
+[dependency-groups]
+dev = ["pytest>=8.3,<10", "ruff>=0.15,<0.18"]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["saber"]
+
+[tool.uv]
+default-groups = ["dev"]
+# Lock only for the platforms we actually use (Windows laptop, Linux CI / rented GPU).
+environments = ["sys_platform == 'win32'", "sys_platform == 'linux'"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "NPY"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+    "hardware: needs a real xArm 6 / cameras (always skipped in CI)",
+    "gpu: needs a CUDA GPU",
+    "heavy: needs optional heavy extras (lerobot, torch, whisper)",
+]
+filterwarnings = ["ignore::DeprecationWarning:matplotlib.*"]
+
+# PyTorch with CUDA 12.8: required for RTX 50xx (Blackwell, sm_120). Only used when an
+# extra that pulls torch is installed; the CPU-only test suite never installs torch.
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu128" }]
+torchvision = [{ index = "pytorch-cu128" }]
