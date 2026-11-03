@@ -1,0 +1,4 @@
+# S3: SmolVLA fine-tuned on Spanish/Spanglish relabelled demos, raw utterance.
+system: S3
+policy: smolvla:outputs/train/smolvla_xarm6_es_relabel/checkpoints/last/pretrained_model
+trials: {S2: 40, S3: 40}

@@ -120,3 +120,37 @@ Verified by downloading the wheels (`pip download --no-deps`) and reading the so
   paraphrase that appears in the evaluation bank.
 - `SyntheticPolicy` is an explicit caricature for tests (understands only English nouns, else
   a language-blind per-scene guess). It says nothing about SmolVLA's real behaviour.
+
+## D6. IMG, baselines and calibration (Phase 5)
+
+- phi = TCP position (URDF FK) at configurable horizon steps (default: last step of the chunk)
+  + gripper command × `gripper_scale_m` (0.05 m per unit), so gripper and position share units.
+- Clustering = single linkage with threshold `radius` (connected components). radius =
+  max(`rel_radius` × w-weighted mean within-candidate RMS dispersion, `min_radius_m`).
+  `rel_radius = 2.0`, `min_radius_m = 0.02` are **untuned defaults**; radius is an ablation.
+- R uses the trace (sum over dimensions) of the w-weighted between- and within-candidate
+  variances; R = inf when within = 0 and between > 0 (e.g. S = 1).
+- Candidates equal to `NONE` (interpreter says absent) form their own non-executable group.
+  The gate abstains if that group is modal or m* < tau. `exec_score` (= mass of the modal
+  behaviour group, 0 when NONE is modal) is the score used for AUROC and calibration, so
+  `execute(tau) == (exec_score >= tau)`.
+- Arbitration: execute one sample of the modal group, from the candidate contributing the most
+  mass to it, closest to the group mean. Clarification question names the objects nearest to
+  the two heaviest groups' mean end positions ("¿Te refieres a X o a Y?").
+- Known limitation, visible in tests: if the policy maps two readings to the same motion
+  (e.g. it cannot tell pliers from precision pliers), IMG executes. IMG measures behavioural
+  disagreement, not linguistic ambiguity; A1 results will show whether this happens.
+- **G-act** = IMG with K = 1 but with the absolute radius: with a single candidate the relative
+  radius is degenerate (its dispersion already contains the modes and would merge them).
+- G-text / G-ood use a deterministic hashed character-trigram embedding by default (no model
+  download); any embedding callable can be passed. G-int = Mahalanobis (shrinkage 0.1) of the
+  pooled prefix hidden state + mean pairwise sample distance, as negative summed z-scores.
+  This follows the VLA-FAIL abstract only (the paper is marked † in the proposal).
+- **Calibration.** The proposal's target (wrong-object rate among executed decisions) is a
+  selective risk, which is not monotone in tau, so plain conformal risk control does not apply
+  to it. Default = Learn-then-Test fixed-sequence testing with exact binomial p-values
+  (P(selective risk ≤ alpha) ≥ 1 − delta). The sequence starts at the first threshold that
+  executes at least n_min = ceil(log delta / log(1 − alpha)) decisions (fewer can never reject);
+  that start depends on scores only, not labels. CRC on the joint rate P(wrong ∧ executed) is
+  provided for comparison. Both are checked by Monte Carlo on synthetic data in
+  `tests/test_gate.py`; these are checks of the procedures, not results.

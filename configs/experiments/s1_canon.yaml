@@ -1,0 +1,6 @@
+# S1: S0 + canonicalization (translate-test) with the interpreter chosen in the pilot.
+system: S1
+policy: smolvla:outputs/train/smolvla_xarm6_en/checkpoints/last/pretrained_model
+interpreter: hf:TBD_AFTER_PILOT
+k: 5
+trials: {E0: 40, S2: 40, S3: 40, V1: 40, V2: 40, A1: 20, O1: 20}

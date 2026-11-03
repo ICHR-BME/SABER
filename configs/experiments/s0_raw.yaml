@@ -1,0 +1,10 @@
+# PROPUESTA 2.3.3. S0: SmolVLA-EN with the raw utterance + no-instruction and shuffled controls.
+system: S0
+policy: smolvla:outputs/train/smolvla_xarm6_en/checkpoints/last/pretrained_model
+trials:            # condition -> paired trials
+  E0: 40
+  S2: 40
+  S3: 40
+  V2: 40
+  NOINSTR: 40      # control: empty instruction
+  SHUFFLED: 40     # control: instruction of a different (wrong) object

@@ -1,0 +1,16 @@
+# S2: S1 + IMG with modal-group arbitration. tau is set by scripts/calibrate_gate.py on the ODPB
+# (do not hand-tune it on real-robot Spanish trials).
+system: S2
+policy: smolvla:outputs/train/smolvla_xarm6_en/checkpoints/last/pretrained_model
+interpreter: hf:TBD_AFTER_PILOT
+k: 5
+trials: {S2: 40, S3: 40, V2: 40, A1: 20, O1: 20}
+gate:
+  tau: 0.8                 # PLACEHOLDER until calibration (alpha below)
+  calibration: {method: ltt, alpha: 0.10, delta: 0.10}
+  n_samples: 4             # S
+  rel_radius: 2.0          # cluster radius = rel_radius * within-candidate RMS dispersion
+  min_radius_m: 0.02
+  horizon_steps: [-1]      # FK at the last step of the chunk
+  gripper_scale_m: 0.05
+  uniform_weights: false   # ablation: true

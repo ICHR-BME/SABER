@@ -39,7 +39,12 @@ class SyntheticPolicy:
         self.name = "synthetic"
         self.object_positions = {k: np.asarray(v, float) for k, v in object_positions.items()}
         self.tcp_offset = np.asarray(tcp_offset, float)
-        self.known = known_nouns or {"screwdriver": "screwdriver", "pliers": "pliers", "wrench": "wrench"}
+        self.known = known_nouns or {
+            "screwdriver": "screwdriver",
+            "precision pliers": "precision_pliers",
+            "pliers": "pliers",
+            "wrench": "wrench",
+        }
         self.horizon = horizon
         self.approach = approach_m
         self.noise = noise_m
@@ -53,8 +58,13 @@ class SyntheticPolicy:
     def target_for(self, instruction: str) -> tuple[str, bool]:
         """(object, understood). Unknown instructions get a language-blind per-scene guess."""
         low = instruction.lower()
-        hits = [obj for noun, obj in self.known.items() if noun in low and obj in self.object_positions]
-        if len(hits) == 1:
+        hits: list[str] = []
+        for noun in sorted(self.known, key=len, reverse=True):  # longest noun wins
+            obj = self.known[noun]
+            if noun in low and obj in self.object_positions:
+                hits.append(obj)
+                low = low.replace(noun, " ")
+        if len(set(hits)) == 1:
             return hits[0], True
         keys = sorted(self.object_positions)
         h = zlib.crc32(f"{self.scene_seed}".encode())
