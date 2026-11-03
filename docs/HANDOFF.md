@@ -26,7 +26,7 @@ Repositorio: `github.com/ICHR-BME/SABER` (licencia MIT).
 
 ## 3. Decisiones ya tomadas (no reabrir sin motivo)
 
-1. El VLA va en **manipulación de mesa**, no en el AGV.
+1. Lo importante es el **VLA**. El brazo es fijo y se prueba en una **celda**. Nada de base móvil ni AGV.
 2. Brazo: **uFactory xArm 6** del laboratorio (no SO-101). Consecuencias en la sección 0 de la propuesta.
 3. Política principal: **SmolVLA**, ajustada solo con instrucciones en inglés (eso es lo que se diagnostica).
 4. Fase A con **3 objetos**: desarmador, pinzas, llave. Tarea T1: "toma X y ponlo en la charola".
@@ -47,6 +47,8 @@ Repositorio: `github.com/ICHR-BME/SABER` (licencia MIT).
 | 7 | Sede final: IROS o CASE | PM | Formato del artículo |
 | 8 | Quiénes son los dos hablantes nativos que revisan el banco de comandos y anotan videos | Equipo | Condiciones S2, S3 y anotación ciega |
 | 9 | Fecha de Expoingenierías y qué se muestra | Equipo | Demo D5 |
+| 10 | Qué cámaras tiene la celda (número, posición, frecuencia, ¿hay de muñeca?) y cómo se leen | Laboratorio | Grabación de demos |
+| 11 | Cómo se le mandan comandos al xArm dentro de la celda (SDK directo, ROS 2, PLC) y si se permite modo servo | Laboratorio | Interfaz de control |
 
 ## 5. Estado del software
 
@@ -77,7 +79,8 @@ Al 3 de noviembre el repositorio solo contenía `LICENSE`. El speedrun de Claude
 - [ ] Correr el speedrun y revisar su reporte; correr `uv run pytest` tú mismo.
 - [ ] Ir al laboratorio: confirmar modelo del brazo, pinza, IP del controlador y firmware.
 - [ ] Probar `scripts/xarm_check.py` **con alguien presente y el paro de emergencia en la mano**.
-- [ ] Montar las dos cámaras (imprimir soporte de muñeca) y verificar que se graban a la misma frecuencia.
+- [ ] Revisar las cámaras de la celda: que se puedan leer desde la laptop y grabar sincronizadas. Decidir si hace falta una de muñeca.
+- [ ] Conocer el procedimiento de seguridad de la celda (paro, reinicio, acceso) antes de la primera ejecución.
 - [ ] Pedir las piezas de teleoperación.
 
 ### 6.2 Semana 10–16 nov (meta G0)
@@ -115,8 +118,8 @@ Al 3 de noviembre el repositorio solo contenía `LICENSE`. El speedrun de Claude
 
 Resumen; la versión completa está en `docs/SAFETY.md`.
 - Nunca solo: dos personas en cualquier ejecución autónoma.
-- Paro de emergencia en la mano, zona de exclusión marcada, nadie dentro durante un ensayo.
-- Modo reducido y caja del TCP activos en el controlador, además del supervisor en software.
+- Se siguen las reglas de seguridad de la celda. Paro de emergencia de la celda en la mano; nadie dentro durante un ensayo.
+- La seguridad de la celda protege a las personas, no al equipo: el modo reducido y la caja del TCP en el controlador, más el supervisor en software, siguen siendo obligatorios.
 - Toda política nueva se prueba primero a velocidad mínima.
 - El sistema no está certificado (ISO 10218, ISO/TS 15066); no lo describas como seguro para colaboración.
 

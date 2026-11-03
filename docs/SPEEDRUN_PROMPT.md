@@ -10,7 +10,7 @@ Eres el ingeniero de software principal del proyecto SABER. Tu trabajo en esta s
 
 1. Lee completo `docs/PROPUESTA.md`. Es la fuente de verdad para tareas, condiciones de lenguaje, sistemas S0–S4, compuertas base, métricas, hipótesis y plan de análisis. Si algo de este prompt contradice la propuesta, gana la propuesta y lo anotas en `docs/DECISIONS.md`.
 2. El repositorio hoy solo tiene `LICENSE` (MIT). Todo lo demás lo creas tú.
-3. Hardware objetivo: uFactory xArm 6 con pinza, dos cámaras USB (muñeca y frontal), laptop con RTX 5060 para inferencia. **No tienes acceso al robot.** Todo debe funcionar con un robot simulado (`MockXArm`) y con datos sintéticos.
+3. Hardware objetivo: uFactory xArm 6 **fijo dentro de una celda** que ya tiene cámaras montadas y seguridad perimetral, y una laptop con RTX 5060 para inferencia. No hay base móvil ni AGV: no escribas nada de movilidad. La configuración de cámaras de la celda no se conoce todavía, así que el número y nombre de las vistas debe ser configurable por YAML. **No tienes acceso al robot.** Todo debe funcionar con un robot simulado (`MockXArm`) y con datos sintéticos.
 
 ## Reglas no negociables
 
@@ -28,6 +28,7 @@ Eres el ingeniero de software principal del proyecto SABER. Tu trabajo en esta s
 saber/
   robots/xarm6/      driver LeRobot-compatible, MockXArm, cinemática, config
   safety/            supervisor (independiente del modelo)
+  cameras/           lectura y sincronización de las cámaras de la celda
   teleop/            adaptadores GELLO, SpaceMouse, teclado → acciones
   record/            grabación a LeRobotDataset (o formato compatible)
   lang/              banco de comandos, ASR n-best, intérprete K candidatas
@@ -56,12 +57,13 @@ Crea una lista de tareas con estas fases y márcalas al avanzar. Cada fase termi
 - `safety/supervisor.py`: límites articulares, caja cartesiana del TCP, tope de velocidad y aceleración por paso, rechazo de saltos, watchdog de latencia y de cámara, paro. Configurable por YAML. Pruebas unitarias exhaustivas, incluidas propiedades (hypothesis): ninguna acción que sale del supervisor viola un límite.
 - `robots/xarm6/`: clase `Robot` compatible con la interfaz de la versión fijada de LeRobot, sobre el xArm-Python-SDK. Espacio de acción: 6 articulaciones + pinza. Al conectar: modo reducido, sensibilidad de colisión alta y límites del TCP en el controlador (verifica los nombres de las funciones en el SDK instalado).
 - `MockXArm` con la misma interfaz, cinemática real y cámaras sintéticas.
+- `cameras/`: lector genérico de las cámaras de la celda (OpenCV / V4L2 y, si aplica, RTSP o ROS 2), con sincronización por marca de tiempo y número de vistas configurable.
 - `scripts/xarm_check.py`: conecta, lee estado, mueve una articulación 2° a velocidad mínima solo con `--i-am-supervising`.
-- `docs/SAFETY.md`: protocolo de sesión (checklist previo, paro, zona de exclusión, regla de dos personas).
+- `docs/SAFETY.md`: protocolo de sesión dentro de la celda (checklist previo, paro de la celda, reinicio, regla de dos personas), dejando huecos marcados `TODO(celda)` para el procedimiento propio de la celda.
 
 ### Fase 2. Teleoperación y grabación
 - Adaptadores de teleoperación con interfaz común: GELLO (mapeo articular), SpaceMouse (cartesiano + IK) y teclado (solo para depuración).
-- `record/`: grabación de episodios con ambas cámaras, estado, acción e instrucción en inglés, a `LeRobotDataset`. Metadatos por episodio: objetivo, zona, posiciones de los tres objetos, operador y split (train / zona reservada).
+- `record/`: grabación de episodios con todas las vistas configuradas, estado, acción e instrucción en inglés, a `LeRobotDataset`. Metadatos por episodio: objetivo, zona, posiciones de los tres objetos, operador y split (train / zona reservada).
 - `scripts/record_demos.py` con protocolo guiado: le dice al operador qué objetivo y qué zona toca según una asignación balanceada.
 - Prueba de extremo a extremo con `MockXArm` y teleoperación sintética.
 
@@ -96,7 +98,7 @@ Crea una lista de tareas con estas fases y márcalas al avanzar. Cada fase termi
 
 ### Fase 8. Preregistro y traspaso
 - `prereg/hypotheses.md` y `prereg/analysis_plan.yaml` con H1–H5, pruebas y criterios del Apéndice D, más un script que calcula el hash del plan para congelarlo.
-- `docs/SETUP.md`: instalación desde cero, conexión del xArm, cámaras, teleoperación.
+- `docs/SETUP.md`: instalación desde cero, conexión al xArm y a las cámaras de la celda, teleoperación.
 - Actualiza `docs/HANDOFF.md` (ya existe; no lo reescribas desde cero): completa la tabla "Estado del software" con lo que quedó **hecho, parcial o stub**, con el archivo y la prueba que lo demuestran, y agrega cualquier tarea humana nueva que descubras.
 
 ## Al terminar

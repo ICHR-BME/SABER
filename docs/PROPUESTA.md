@@ -18,6 +18,7 @@ Versión 2 · 3 de noviembre de 2026 (sustituye a la v1 del 28 de septiembre de 
 | 4 | Licencia del código: **MIT** | El repositorio ya tiene licencia MIT; la v1 decía Apache-2.0 | Se corrige la inconsistencia |
 | 5 | Cronograma rebaselinado al 3 de noviembre | Al 3 de noviembre el repositorio solo contiene la licencia: el plan de 10 semanas iba en la semana 6 sin código | Las compuertas G2–G3 se recorren; G3 probablemente cae en la Fase B |
 | 6 | Registro en Expoingenierías | Requisito académico (materia MR-2035) | Se agrega una demo de expo como entregable intermedio |
+| 7 | Se elimina toda movilidad: sin base móvil, sin AGV, sin integración con el AGV | Decisión del equipo (3 nov 2026): lo importante es el VLA | El brazo es fijo y se prueba en una **celda** que ya tiene cámaras montadas y seguridad perimetral |
 
 ---
 
@@ -25,9 +26,9 @@ Versión 2 · 3 de noviembre de 2026 (sustituye a la v1 del 28 de septiembre de 
 
 ### 1.1 Contexto y decisión de alcance
 
-El AGV para tarimas no es el anfitrión adecuado para un VLA: su navegación es una pila clásica y madura (SLAM, lidar de seguridad), y los camiones industriales sin conductor tienen su propia norma de seguridad (ISO 3691-4; verificar antes de citar). SABER lleva el VLA a la manipulación de mesa, donde la evidencia publicada sí lo respalda. Incluso el trabajo de VLA con movilidad mantiene clásica la navegación: AnywhereVLA [1] combina SLAM con una cabeza SmolVLA y reporta 46 % de éxito global.
+SABER se concentra en el VLA en manipulación de mesa con un brazo fijo, donde la evidencia publicada lo respalda. La movilidad queda fuera de alcance: no es fuente de novedad (AnywhereVLA [1] ya combina navegación clásica con una cabeza SmolVLA) y agregaría riesgo sin aportar a las preguntas de investigación.
 
-**Qué hace el robot.** Un xArm 6 surte herramientas etiquetadas (desarmador, pinzas, llave en la Fase A) desde la mesa hacia una charola de kit en un laboratorio de enseñanza. Complementa el proyecto del AGV: el AGV mueve la caja y el brazo hace el último metro de recolección.
+**Qué hace el robot.** Un xArm 6 fijo dentro de una celda surte herramientas etiquetadas (desarmador, pinzas, llave en la Fase A) desde la mesa de trabajo hacia una charola de kit.
 
 **Por qué español.** Los operadores de un laboratorio mexicano hablan español. Los VLA abiertos se entrenan sobre todo con instrucciones en inglés, y los estudios multilingües existentes son en simulación [2, 3], salvo una demostración en robot real [4].
 
@@ -93,7 +94,7 @@ Tubería: **escuchar → transcribir → interpretar → verificar (IMG) → act
 |---|---|---|
 | Brazo | uFactory xArm 6 del laboratorio | Confirmar disponibilidad, horas de uso, versión de firmware y controlador |
 | Pinza | xArm Gripper (confirmar modelo) | Si no existe, es la mayor partida del presupuesto |
-| Cámaras | 2 USB: muñeca y frontal | Montaje de muñeca impreso en la Bambu Lab A1 |
+| Cámaras | Las ya montadas en la celda | Confirmar número, posición, resolución y frecuencia, y si hay vista de muñeca. SmolVLA admite varias vistas; si la celda no tiene cámara de muñeca, se evalúa agregar una (soporte impreso en la Bambu Lab A1) |
 | Teleoperación | **Opción preferida: GELLO para xArm** (réplica cinemática con servos Dynamixel). Alternas: SpaceMouse en espacio cartesiano; modo manual (guiado a mano) del xArm | El guiado a mano mete la mano del operador en la imagen y contamina las demos; usarlo solo como último recurso |
 | Integración | Clase `Robot` propia para LeRobot sobre el xArm-Python-SDK | Verificar la guía de integración de hardware de la versión de LeRobot fijada |
 | Política | SmolVLA [15] (450 M) ajustada por tarea | Espacio de acción: 6 articulaciones + pinza (7), distinto del SO-100 preentrenado |
@@ -128,17 +129,15 @@ La compuerta corre al inicio del episodio y en cada replanteo hasta que la pinza
 - **G-int:** Mahalanobis del estado oculto + consistencia de trozos, al estilo de VLA-FAIL [21] (según su resumen).
 - **G-pert:** desacuerdo por perturbación de pesos de bajo rango, al estilo de PFD [22] (Fase B).
 
-#### 2.2.5 Supervisor de seguridad y movilidad opcional
+#### 2.2.5 Seguridad: celda, controlador y supervisor
 
-El xArm 6 tiene bastante más fuerza que un SO-101: el supervisor ya no es opcional.
+La celda ya aporta la seguridad perimetral (paro de emergencia y protección de acceso; confirmar qué incluye y cómo se reinicia). Eso protege a las personas, pero no evita que una política equivocada choque el brazo con la mesa, los objetos o las cámaras. Por eso se mantienen dos capas más:
 
 - **En el controlador del xArm** (funciones del xArm-Python-SDK; verificar nombres en la versión instalada): sensibilidad de colisión alta, modo reducido con velocidad TCP máxima baja, límite cartesiano del TCP (caja de trabajo) y límites articulares.
 - **En software, entre política y SDK:** límites articulares, tope de velocidad y aceleración por paso, caja de trabajo, rechazo de acciones con saltos mayores a un umbral, y paro si se pierde la cámara o la política tarda más de un plazo.
-- **Paro de emergencia físico** al alcance del operador en todo ensayo.
+- **Paro de emergencia de la celda** al alcance del operador en todo ensayo.
 
 El supervisor es independiente del modelo y **no está certificado** como dispositivo de seguridad. El prototipo no pretende cumplir ISO 10218 ni ISO/TS 15066 y no debe describirse como certificado.
-
-Movilidad: la demo con base tipo LeKiwi de la v1 queda **suspendida**: la base no carga un xArm 6. La integración con el AGV queda como decisión del PM.
 
 ### 2.3 Diseño experimental
 
@@ -208,7 +207,7 @@ Estado de partida: documentos de propuesta y revisión listos; repositorio con s
 
 | Bloque | Fechas | Contenido | Compuerta |
 |---|---|---|---|
-| A1 | 3–9 nov | Software base, driver xArm + supervisor, teleoperación, cámaras, piloto de LIBERO-Goal | — |
+| A1 | 3–9 nov | Software base, interfaz de control del xArm + supervisor, teleoperación, integración con las cámaras de la celda, piloto de LIBERO-Goal | — |
 | A2 | 10–16 nov | Piloto de 50 demos de T1, primer ajuste de SmolVLA, controles | **G0:** éxito en inglés ≥ 50 % y ≥ 20 puntos sobre sin instrucción |
 | A3 | 17–23 nov | Resto de demos, diagnóstico S0 en robot + ODPB, LIBERO-Goal en español | **G1:** español crudo y Spanglish cerca del azar y bajo inglés (p < 0.01, n ≥ 300 decisiones fuera de línea) |
 | A4 | 24–30 nov | IMG y bases fuera de línea; demo para Expoingenierías | **G2:** IMG supera a toda base en AUROC en 2 de 3 cambios |
@@ -223,12 +222,12 @@ El brazo y la laptop ya existen. Cifras en USD, sin envío ni aranceles; **estim
 
 | Concepto | Costo (USD, est.) | Notas |
 |---|---|---|
-| 2 cámaras USB | 30–60 | |
+| Cámara de muñeca, solo si la celda no tiene | 0–30 | Las cámaras de la celda ya existen |
 | Micrófono y bocina USB | 30–60 | |
 | Objetos, charolas, sujetadores, pinzas de precisión para A1 | 30–60 | |
 | Teleoperación: GELLO para xArm (servos Dynamixel + adaptador) | 250–350 | Alternativa: SpaceMouse, 150–200 |
 | GPU en la nube (ajustes de SmolVLA y LIBERO) | 50–150 | SmolVLA, 20 mil pasos: unas 4 h en A100 según la documentación de LeRobot |
-| **Núcleo** | **390–680** | |
+| **Núcleo** | **360–650** | |
 | Pinza del xArm, si el laboratorio no la tiene | Por cotizar | Puede superar al resto del presupuesto |
 | Fase B: GPU para π0.5 con LoRA (> 22.5 GB) | 100–250 | Se libera con G4 |
 
@@ -242,14 +241,15 @@ El brazo y la laptop ya existen. Cifras en USD, sin envío ni aranceles; **estim
 | R4 | No aparece brecha en español | Baja | Alto | G1; giro a vocabulario abierto u otro modelo |
 | R5 | IMG no supera a las bases | Media | Medio | G2; reposicionar a diagnóstico y banco |
 | R6 | Tiempo de robot (disponibilidad del xArm compartido) | Alta | Alto | Reservar bloques; ODPB y simulación en paralelo |
-| R7 | Lesión o daño por un brazo de 5 kg de carga | Baja | Muy alto | Supervisor, modo reducido, paro físico, zona de exclusión, regla de dos personas |
+| R7 | Lesión o daño por un brazo de 5 kg de carga | Baja | Muy alto | Seguridad de la celda, modo reducido, supervisor, regla de dos personas |
+| R11 | Las cámaras de la celda no sirven para la política (ángulo, resolución, sin vista de muñeca) | Media | Medio | Revisar en la semana 1; agregar cámara de muñeca si hace falta |
 | R8 | Otro grupo publica antes | Media | Medio | Preprint en G4; vigilancia semanal |
 | R9 | Ética de datos de voz | Media | Medio | Consentimiento, anonimización; vía institucional definida por el PM |
 | R10 | Traspaso a otro integrante del equipo | Media | Medio | `docs/HANDOFF.md` y `CLAUDE.md` en el repositorio |
 
 ### 2.7 Seguridad, ética y datos
 
-**Seguridad física.** Protocolo escrito de paro antes de cada sesión; paro de emergencia al alcance; zona de exclusión marcada; modo reducido y límites del TCP en el controlador; nadie entra al espacio de trabajo durante un ensayo; regla de dos personas para cualquier ejecución autónoma; la primera ejecución de cada política nueva se hace a velocidad mínima. No se usa cautín encendido.
+**Seguridad física.** Se siguen las reglas de la celda; protocolo escrito de paro antes de cada sesión; paro de emergencia de la celda al alcance; modo reducido y límites del TCP en el controlador; nadie entra al espacio de trabajo durante un ensayo; regla de dos personas para cualquier ejecución autónoma; la primera ejecución de cada política nueva se hace a velocidad mínima. No se usa cautín encendido.
 
 **Ética y voz.** Consentimiento informado, anonimización, almacenamiento cifrado y política de retención. La vía ética institucional es una decisión pendiente del PM. Solo se liberan grabaciones consentidas y sintéticas.
 
@@ -262,7 +262,7 @@ El brazo y la laptop ya existen. Cifras en USD, sin envío ni aranceles; **estim
 - **D3** Biblioteca IMG con envoltura para LeRobot y driver del xArm 6.
 - **D4** Artículo y preprint.
 - **D5** Video de demo y demo en vivo para Expoingenierías.
-- **D6** Notas de montaje (cámaras, teleoperación, supervisor).
+- **D6** Notas de montaje en la celda (cámaras, teleoperación, supervisor).
 
 | Sede | Fecha límite | Comentario |
 |---|---|---|
@@ -283,13 +283,13 @@ El brazo y la laptop ya existen. Cifras en USD, sin envío ni aranceles; **estim
 | Dos anotadores nativos de español mexicano | Banco de comandos y etiquetado ciego |
 | Asesor académico | Diseño experimental y estadística |
 
-**Decisiones requeridas:** (1) presupuesto del núcleo; (2) horario de uso del xArm 6 y existencia de la pinza; (3) sede objetivo; (4) vía ética para voz; (5) créditos de GPU; (6) integración con el AGV.
+**Decisiones requeridas:** (1) presupuesto del núcleo; (2) horario de uso del xArm 6 y existencia de la pinza; (3) sede objetivo; (4) vía ética para voz; (5) créditos de GPU; (6) acceso a la celda y a sus cámaras.
 
 ---
 
 ## 3. Conclusiones
 
-- El VLA rinde más en manipulación que en el AGV; ahí se concentra SABER.
+- Lo importante es el VLA: SABER lo prueba con un brazo fijo en una celda, sin movilidad.
 - La afirmación central es medible y falsable: un VLA abierto y pequeño falla en silencio ante español, Spanglish y voz ruidosa, y las compuertas G0–G4 lo ponen a prueba.
 - Con el xArm 6 se gana seguridad y repetibilidad y se pierde el argumento de bajo costo del brazo y la integración inmediata con LeRobot.
 - La novedad es moderada: la diferencia frente a UPS es marginalizar sobre interpretaciones bajo cambio lingüístico, con una compuerta calibrada previa al movimiento y validada en robot real.
@@ -359,7 +359,7 @@ Sea N el número de ensayos de una celda; N_ok los que colocan el objeto correct
 
 Las marcadas con † tienen título abreviado y autores omitidos; completar con arXiv antes de enviar.
 
-1. K. Gubernatorov et al., "AnywhereVLA," arXiv:2509.21006, 2025.
+1. K. Gubernatorov et al., "AnywhereVLA," arXiv:2509.21006, 2025. (Solo como referencia de alcance.)
 2. X. Dong et al., "When does language matter? Multilingual instructions reveal step-wise language sensitivity in VLA models," ACL 2026, arXiv:2606.11906.
 3. H. Chen et al., "Beyond English: Uncovering the multilingual gap in VLA models," arXiv:2606.15714, 2026.
 4. A. J. Hancock et al., "Actions as language: Fine-tuning VLMs into VLAs without catastrophic forgetting," ICLR 2026, arXiv:2509.22195.
