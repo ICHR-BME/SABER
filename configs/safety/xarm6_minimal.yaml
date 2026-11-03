@@ -1,0 +1,8 @@
+# Minimal software limits (saber/safety/limits.py). Joint ranges must lie inside the official
+# URDF limits; leaving them null uses the URDF limits. Narrow them for the cell after measuring.
+joint_lower_deg: null
+joint_upper_deg: null
+max_step_deg: 2.0          # per control step (at 30 Hz this caps joint speed at 60 deg/s)
+gripper_min: 0.0
+gripper_max: 1.0
+watchdog_timeout_s: 0.5    # stop the arm if no new action arrives within this time

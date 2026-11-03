@@ -1,0 +1,32 @@
+# xArm 6 kinematic and joint-limit parameters, copied verbatim (values only) from the official
+# uFactory ROS 2 description. DO NOT EDIT BY HAND: re-copy from the source if it changes.
+#
+# source_repo:   https://github.com/xArm-Developer/xarm_ros2  (branch humble)
+# source_commit: ac736c92b02de7ca7e0be6f737d77d46707464d8  (2026-10-20)
+# kinematics:    xarm_description/config/kinematics/default/xarm6_default_kinematics.yaml
+# joint limits:  xarm_description/urdf/xarm6/xarm6.urdf.xacro (macro defaults, radians)
+# velocity:      xarm_description/urdf/xarm6/xarm6.urdf.xacro (<limit velocity="3.14"/>)
+# tcp offset:    xarm_description/urdf/gripper/xarm_gripper.urdf.xacro (joint_tcp origin z=0.172 m,
+#                parent xarm_gripper_base_link, attached to link6). Only valid with the xArm Gripper.
+#
+# Each joint origin is xyz (m) + rpy (rad) relative to the parent link; every joint rotates about
+# its local z axis (<axis xyz="0 0 1"/>).
+source:
+  repo: https://github.com/xArm-Developer/xarm_ros2
+  commit: ac736c92b02de7ca7e0be6f737d77d46707464d8
+kinematics:
+  joint1: {x: 0, y: 0, z: 0.267, roll: 0, pitch: 0, yaw: 0}
+  joint2: {x: 0, y: 0, z: 0, roll: -1.5708, pitch: 0, yaw: 0}
+  joint3: {x: 0.0535, y: -0.2845, z: 0, roll: 0, pitch: 0, yaw: 0}
+  joint4: {x: 0.0775, y: 0.3425, z: 0, roll: -1.5708, pitch: 0, yaw: 0}
+  joint5: {x: 0, y: 0, z: 0, roll: 1.5708, pitch: 0, yaw: 0}
+  joint6: {x: 0.076, y: 0.097, z: 0, roll: -1.5708, pitch: 0, yaw: 0}
+joint_limits_rad:
+  joint1: [-6.283185307179586, 6.283185307179586]   # [-2*pi, 2*pi]
+  joint2: [-2.059, 2.0944]
+  joint3: [-3.927, 0.19198]
+  joint4: [-6.283185307179586, 6.283185307179586]
+  joint5: [-1.69297, 3.141592653589793]
+  joint6: [-6.283185307179586, 6.283185307179586]
+joint_velocity_limit_rad_s: 3.14
+xarm_gripper_tcp_offset_m: [0.0, 0.0, 0.172]

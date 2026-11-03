@@ -1,0 +1,11 @@
+# SYNTHETIC PLACEHOLDER LAYOUT. These coordinates are NOT measured in the cell; they only let
+# MockXArm and the tests run. Replace them with measured values and set measured: true.
+measured: false
+zones_m:            # zone centre (x, y, z) in the robot base frame, metres
+  z1: [0.40, -0.20, 0.02]
+  z2: [0.45, -0.10, 0.02]
+  z3: [0.50, 0.00, 0.02]
+  z4: [0.45, 0.10, 0.02]
+  z5: [0.40, 0.20, 0.02]
+tray_m: [0.25, 0.35, 0.05]
+heldout_zones: [z5]   # 20 % extra demos in reserved zones go here (PROPUESTA 2.3.1)

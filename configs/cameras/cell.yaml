@@ -1,0 +1,19 @@
+# Camera views. The number and names of the cell cameras are unknown until the lab confirms
+# them (HANDOFF open decision 10): add/remove entries freely. `source` can be:
+#   - an integer device index (USB / V4L2 / DirectShow),
+#   - a device path such as /dev/video2 (Linux),
+#   - an rtsp:// or http:// URL (IP cameras),
+#   - "synthetic" (rendered by MockXArm, used in tests).
+# width/height/fps are requested from the device; the reader reports what it actually got.
+max_skew_s: 0.05     # frames further apart than this are not considered synchronized
+views:
+  wrist:
+    source: synthetic
+    width: 320
+    height: 240
+    fps: 30
+  cell_front:
+    source: synthetic
+    width: 320
+    height: 240
+    fps: 30

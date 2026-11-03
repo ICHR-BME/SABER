@@ -1,0 +1,26 @@
+# xArm 6 in the lab cell. Values set to null MUST be measured/confirmed by a human before the
+# real driver will connect (see docs/SAFETY.md). Do not copy values from the internet.
+
+robot:
+  ip: null                      # controller IP (HANDOFF open decision 10)
+  control_hz: 30                # servo loop rate used for recording and policies
+  gripper:
+    installed: true             # confirm the xArm Gripper exists (HANDOFF open decision 2)
+    # xArm Gripper position units as used by XArmAPI.set_gripper_position. Confirm on the real
+    # gripper; normalized command 0 = open -> open_pos, 1 = closed -> closed_pos.
+    open_pos: null
+    closed_pos: null
+    speed: null                 # r/min, as in set_gripper_position(speed=...)
+  tcp_offset_m: [0.0, 0.0, 0.172]   # official xArm Gripper TCP (xarm_ros2); change if the tool differs
+  home_deg: null                # safe home joint configuration measured in the cell
+
+controller_safety:              # applied once at connect time through the SDK
+  collision_sensitivity: null   # 0..5 (SDK set_collision_sensitivity); choose with the lab
+  reduced_max_tcp_speed_mm_s: null
+  # [x_max, x_min, y_max, y_min, z_max, z_min] in mm, base frame. Must exclude the table and the
+  # wrist camera from reach. Measure in the cell.
+  tcp_boundary_mm: null
+  enable_fence_mode: true       # set_fence_mode(True): enforce the boundary
+
+software_limits: configs/safety/xarm6_minimal.yaml
+cameras: configs/cameras/cell.yaml
