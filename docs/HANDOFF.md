@@ -1,7 +1,7 @@
 # SABER: Documento de traspaso
 
 Para: el integrante del equipo que continúa el proyecto, y para su asistente de IA.
-De: Ian Carlos Hernández Robles · Última actualización: 3 de noviembre de 2026 (tabla de la sección 5 y tareas 6.0 llenadas por el speedrun)
+De: Ian Carlos Hernández Robles · Última actualización: 5 de noviembre de 2026 (IP del controlador, herramientas de puesta en marcha y runbook; antes: speedrun del 3 nov)
 
 > **Instrucciones para el asistente (Claude u otro):** este archivo es tu punto de partida. Antes de proponer o escribir nada, lee en este orden: (1) este documento completo, (2) `docs/PROPUESTA.md`, (3) `CLAUDE.md` y `docs/DECISIONS.md` si existen. La propuesta es la fuente de verdad del diseño experimental. No inventes resultados, parámetros del robot ni fechas; si algo no está aquí ni en la propuesta, pregunta al usuario. Toda ejecución en el robot real requiere a un humano presente con el paro de la celda a la mano.
 
@@ -59,9 +59,15 @@ Al 3 de noviembre el repositorio solo contenía `LICENSE`. El speedrun de Claude
 
 | Módulo | Estado (hecho / parcial / stub / pendiente) | Archivo | Prueba que lo demuestra |
 |---|---|---|---|
-| Esqueleto, CI, `CLAUDE.md` | hecho | `pyproject.toml`, `uv.lock`, `.github/workflows/ci.yml`, `CLAUDE.md` | `uv sync && uv run pytest` (76 pasan, 3 se saltan sin extras) |
+| Esqueleto, CI, `CLAUDE.md` | hecho | `pyproject.toml`, `uv.lock`, `.github/workflows/ci.yml`, `CLAUDE.md` | `uv sync && uv run pytest` (5 nov: 108 pasan, 5 se saltan sin extras; con `--extra robot`, 110 pasan y 3 se saltan) |
 | Límites mínimos (recorte de acciones, paro) | hecho | `saber/safety/limits.py`, `configs/safety/xarm6_minimal.yaml` | `tests/test_safety_cameras.py` |
 | Driver xArm 6 + `MockXArm` | parcial: probado contra un SDK simulado con los mismos nombres de función; falta probar en el brazo | `saber/robots/xarm6/driver.py`, `mock.py`, `lerobot_compat.py`, `scripts/xarm_check.py` | `tests/test_xarm6.py` |
+| Sondeo de solo lectura (IP confirmada `192.168.1.203`) | parcial: getters verificados en el código del SDK 1.18.4; bloquea el `clean_warn` implícito del SDK y el ajuste de baudios de la pinza; probado con un SDK falso cuyos setters fallan; **sin correr en el brazo** | `saber/robots/xarm6/probe.py`, `saber/session.py`, `scripts/xarm_check.py` (sin `--i-am-supervising`) | `tests/test_probe.py` |
+| Revisión de red (`net_check`) | parcial: probado con interfaces y sockets falsos y en la laptop sin el brazo | `scripts/net_check.py` | `tests/test_net_check.py` |
+| Medición de la celda (`measure_cell`) | parcial: probado con un SDK falso que reproduce poses; propone la caja del TCP, nunca escribe en `configs/` | `scripts/measure_cell.py` | `tests/test_measure_cell.py` |
+| Revisión de cámaras (`camera_check`) | parcial: probado con cámaras sintéticas y un `VideoCapture` falso; sin cámaras reales | `scripts/camera_check.py` | `tests/test_camera_check.py` |
+| Lazo cerrado sin VLA (`run_live --policy synthetic`, `--dry-run`, `--max-episode-s`) | parcial: dry-run probado con SDK falso (no llama ningún método de movimiento); el driver real `XArm6` corre el lazo sobre el SDK simulado | `saber/robots/xarm6/dry_run.py`, `saber/live.py`, `scripts/run_live.py` | `tests/test_run_live_real.py` |
+| Runbook del equipo | hecho como documento; **sin probar en la celda** | `docs/RUNBOOK_XARM.md` | — |
 | Cinemática desde URDF oficial | hecho (parámetros copiados de `xarm_ros2` @ `ac736c9`; verificar contra la FK del controlador con `xarm_check.py`) | `saber/robots/xarm6/kinematics.py`, `data/xarm6_official.yaml` | `tests/test_xarm6.py::test_fk_zero_pose_matches_known_flange_position` |
 | Cámaras (muñeca + celda, sincronización) | parcial: lector OpenCV/RTSP sin probar con cámaras reales | `saber/cameras/`, `configs/cameras/cell.yaml` | `tests/test_safety_cameras.py` |
 | Teleoperación (GELLO / SpaceMouse) | parcial: mapeos probados con lectores falsos; sin hardware | `saber/teleop/` | `tests/test_teleop_record.py` |
@@ -80,8 +86,21 @@ Al 3 de noviembre el repositorio solo contenía `LICENSE`. El speedrun de Claude
 
 Toda sesión con el brazo sigue `docs/RUNBOOK_XARM.md` (escalera de pruebas, desde el peldaño 1 cada vez).
 
+### 6.0a En la celda, en este orden (5 nov; detalles en `docs/RUNBOOK_XARM.md`)
+- [ ] Elegir con el laboratorio la IP fija de la laptop en `192.168.1.0/24` (no `.203`, sin puerta de enlace) y comprobar con `ping` que está libre.
+- [ ] `uv sync --extra robot`; cable Ethernet al controlador; Wi-Fi apagado o fuera de `192.168.1.x`; `uv run python scripts/net_check.py` en verde.
+- [ ] `uv run --extra robot python scripts/xarm_check.py` (solo lectura): anotar firmware y SN; `error_code` y `warn_code` en 0; sin aviso de offset del TCP.
+- [ ] `scripts/measure_cell.py --measured-by "..."`: medir casa, mesa, zonas, charola, puntos de frontera y pinza abierta/cerrada. Revisar `outputs/cell_measurements_<fecha>.yaml` con el laboratorio.
+- [ ] Decidir con el laboratorio (no se miden con el script): `collision_sensitivity`, `reduced_max_tcp_speed_mm_s` (empezar en el mínimo), `gripper.speed`, y la caja del TCP final a partir de la propuesta.
+- [ ] Copiar a mano los valores a `configs/robot/xarm6_cell.yaml` y `configs/scene/phase_a.yaml` (`measured: true`); commit con los nombres de quien midió.
+- [ ] Primera conexión con movimiento: `xarm_check.py --i-am-supervising --joint 6` (y luego cada articulación); confirmar en UFactory Studio modo reducido, frontera y cerca activos.
+- [ ] Llenar `configs/cameras/cell.yaml` (fuentes reales, resolución/fps: decisión abierta 10) y correr `scripts/camera_check.py`.
+- [ ] `run_live.py --policy synthetic --dry-run`, luego el mismo con movimiento a velocidad mínima, un objeto, una zona.
+- [ ] Prueba del watchdog (Ctrl+C a mitad de movimiento) y del paro de la celda; anotar tiempos y pasos de recuperación.
+- [ ] Solo después: grabación de demos por teleoperación.
+
 ### 6.0 Tareas nuevas que encontró el speedrun (3 nov)
-- [ ] **Medir y llenar los valores de la celda** (hoy en `null` a propósito; el driver y la grabación se niegan a correr sin ellos): IP, posiciones abierta/cerrada de la pinza, sensibilidad de colisión, velocidad TCP reducida y caja del TCP en `configs/robot/xarm6_cell.yaml`; centros de las cinco zonas y de la charola en `configs/scene/phase_a.yaml` (las coordenadas actuales son sintéticas).
+- [ ] **Medir y llenar los valores de la celda** (hoy en `null` a propósito; el driver y la grabación se niegan a correr sin ellos; la IP ya está, ver 6.0a): posiciones abierta/cerrada de la pinza, sensibilidad de colisión, velocidad TCP reducida y caja del TCP en `configs/robot/xarm6_cell.yaml`; centros de las cinco zonas y de la charola en `configs/scene/phase_a.yaml` (las coordenadas actuales son sintéticas).
 - [ ] Confirmar con `xarm_check.py` que la FK del URDF y la FK del controlador coinciden con la pinza montada (offset del TCP = 0.172 m según el URDF de la xArm Gripper).
 - [ ] En la laptop: `uv sync --extra lerobot` y comprobar que `torch.cuda.is_available()` es `True` con la RTX 5060 (se instala torch 2.10 + cu128).
 - [ ] Correr una vez SmolVLA con `SmolVLAChunkPolicy` en GPU: verificar que el muestreo con prefijo compartido da trozos con la misma distribución que `predict_action_chunk` y medir la latencia real (no hay ninguna latencia medida todavía).
