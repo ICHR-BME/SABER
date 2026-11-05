@@ -48,7 +48,7 @@ Repositorio: `github.com/ICHR-BME/SABER` (licencia MIT).
 | 7 | Sede final: IROS o CASE | PM | Formato del artículo |
 | 8 | Quiénes son los dos hablantes nativos que revisan el banco de comandos y anotan videos | Equipo | Condiciones S2, S3 y anotación ciega |
 | 9 | Fecha de Expoingenierías y qué se muestra | Equipo | Demo D5 |
-| 10 | IP del controlador y resolución/frecuencia de las cámaras fijas de la celda | Laboratorio | Configuración |
+| 10 | ~~IP del controlador~~ **resuelta (5 nov 2026): `192.168.1.203`, máscara `255.255.255.0`**. Sigue abierta: resolución/frecuencia de las cámaras fijas de la celda | Laboratorio | Configuración de cámaras |
 
 ## 5. Estado del software
 

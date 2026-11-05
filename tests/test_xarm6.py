@@ -41,8 +41,16 @@ def test_ik_roundtrip():
 
 def test_real_driver_refuses_unmeasured_config():
     cfg = XArm6Config.from_yaml("configs/robot/xarm6_cell.yaml")
-    assert "robot.ip" in cfg.missing_for_real_robot()
-    assert "controller_safety.tcp_boundary_mm" in cfg.missing_for_real_robot()
+    # The IP is confirmed (2026-11-05); every other cell value is still unmeasured.
+    assert cfg.ip == "192.168.1.203"
+    assert "robot.ip" not in cfg.missing_for_real_robot()
+    for field in (
+        "robot.gripper.open_pos/closed_pos",
+        "controller_safety.collision_sensitivity",
+        "controller_safety.reduced_max_tcp_speed_mm_s",
+        "controller_safety.tcp_boundary_mm",
+    ):
+        assert field in cfg.missing_for_real_robot()
     robot = XArm6(cfg, sdk_factory=lambda ip: pytest.fail("must not reach the SDK"))
     with pytest.raises(XArmError, match="unmeasured"):
         robot.connect()

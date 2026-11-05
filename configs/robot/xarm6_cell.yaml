@@ -2,7 +2,7 @@
 # real driver will connect (see docs/SAFETY.md). Do not copy values from the internet.
 
 robot:
-  ip: null                      # controller IP (HANDOFF open decision 10)
+  ip: "192.168.1.203"           # confirmed by the team 2026-11-05; netmask 255.255.255.0
   control_hz: 30                # servo loop rate used for recording and policies
   gripper:
     installed: true             # confirm the xArm Gripper exists (HANDOFF open decision 2)

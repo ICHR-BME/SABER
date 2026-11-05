@@ -246,3 +246,14 @@ Phase B already plans n ≥ 100 for key cells.
   endings of `hypotheses.md`. The speedrun did **not** freeze the plan.
 - `docs/SAFETY.md` and `docs/SETUP.md` are in Spanish (they are used by the lab operators);
   `docs/DECISIONS.md` and code stay in English.
+
+## D10. Controller IP confirmed (2026-11-05)
+
+- Source: Ian (team), 2026-11-05. xArm 6 controller IP `192.168.1.203`, netmask
+  `255.255.255.0` (network `192.168.1.0/24`).
+- Changed: `configs/robot/xarm6_cell.yaml` `robot.ip: "192.168.1.203"`; HANDOFF open
+  decision 10 now only covers the cell cameras' resolution / fps.
+- Unchanged on purpose: gateway, gripper open/closed positions and speed, collision
+  sensitivity, reduced TCP speed, TCP boundary, home pose, cell camera sources and scene zones
+  stay `null` / synthetic until a human measures them. No "typical" values were filled in.
+  `XArm6.connect()` still refuses to connect.
