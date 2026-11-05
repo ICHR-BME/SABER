@@ -344,3 +344,16 @@ checks the names against the installed class when the extra is present.
 - Output only to `outputs/cell_measurements_<date>.yaml`; writing under `configs/` is refused.
   The file records the controller TCP offset at measurement time, the YAML `tcp_offset_m`, git
   commit and config hash. A TCP offset mismatch is warned at start.
+
+## D14. Camera check `scripts/camera_check.py` (2026-11-05)
+
+- Opens every view of `configs/cameras/cell.yaml` with the existing rig (`build_rig`; synthetic
+  views get a static scene). Reports requested vs actual (`OpenCVCamera.actual_settings`, i.e.
+  what `cv2.CAP_PROP_*` reports; `None` for synthetic), distinct frames and measured fps over
+  `--seconds`, `dropped_frames_est = requested fps x seconds - distinct frames` (an estimate:
+  the reader thread keeps only the latest frame), inter-view skew per poll vs `max_skew_s`.
+- Fails if a view does not open, delivers no frame, or skew exceeds `max_skew_s` in > 5 % of
+  polls (the 5 % is a check threshold of this script, not a measured value).
+- One PNG snapshot per view + a JSON record in `outputs/sessions/<date>/`.
+- `--probe-indices 0-5` tries `cv2.VideoCapture(i, CAP_DSHOW)` on Windows (`CAP_V4L2` on Linux).
+- Camera sources, resolution and fps of the cell cameras remain unknown (HANDOFF decision 10).
