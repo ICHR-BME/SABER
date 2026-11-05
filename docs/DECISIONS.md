@@ -310,3 +310,19 @@ checks the names against the installed class when the extra is present.
 - Output: `outputs/sessions/<YYYY-MM-DD>/probe_<HHMMSS>.json` with `git` (commit + dirty flag)
   and `config` (sha256 per file, line endings normalized, plus a combined hash), via
   `saber/session.py`.
+
+## D12. Network preflight `scripts/net_check.py` (2026-11-05)
+
+- Standard library only; changes nothing on the laptop. Interfaces come from
+  `Get-NetIPAddress` + `Get-NetAdapter` JSON on Windows (`PhysicalMediaType` "802.3" = Ethernet,
+  "Native 802.11" = Wi-Fi; language-independent, unlike `ipconfig`) and `ip -j -4 addr` +
+  `/sys/class/net/<if>/wireless` on Linux.
+- Ports read from the installed SDK 1.18.4: `XCONF.SocketConf.TCP_CONTROL_PORT = 502` and
+  `TCP_REPORT_RICH_PORT = 30002` are **required** (`XArmAPI` opens both with the default
+  `report_type='rich'`). Reported but not required: 30001 / 30003 (other report types), 503
+  (`connect_503`, opened lazily by a few RS485 calls) and 18333 (UFactory Studio HTTP API used by
+  `x3/studio.py` and `x3/record.py`; the Studio web UI port was not verified from any other source).
+  `tests/test_net_check.py::test_ports_match_installed_sdk` cross-checks them against `XCONF`.
+- A single interface in the controller network that is Wi-Fi is a failure (the controller is cabled).
+- The static-IP commands (`netsh ... static 192.168.1.<x> 255.255.255.0`, `ip addr add`) are only
+  printed; `<x>` is chosen by the lab.
