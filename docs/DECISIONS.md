@@ -357,3 +357,21 @@ checks the names against the installed class when the extra is present.
 - One PNG snapshot per view + a JSON record in `outputs/sessions/<date>/`.
 - `--probe-indices 0-5` tries `cv2.VideoCapture(i, CAP_DSHOW)` on Windows (`CAP_V4L2` on Linux).
 - Camera sources, resolution and fps of the cell cameras remain unknown (HANDOFF decision 10).
+
+## D15. Closed loop without a VLA: synthetic policy on the real arm, `--dry-run` (2026-11-05)
+
+- `scripts/run_live.py --policy synthetic` is now allowed on the real arm (it used to be
+  mock-only) **only if the scene is measured** (`configs/scene/phase_a.yaml`, `measured: true`):
+  the scripted policy moves toward those coordinates. Real motion still requires
+  `--i-am-supervising` (checked before connecting, so motors are never enabled by a run that
+  would then refuse to move) and the full measured robot config (`XArm6.connect`).
+- `--dry-run` uses `saber/robots/xarm6/dry_run.py::DryRunXArm`: probe-only connection
+  (`ReadOnlySDK`), real joints read once at connect, then a virtual joint state updated with the
+  clipped action (same `clip_action` and watchdog as the real driver). Every would-be action is
+  logged (`would_send`) and nothing is sent; `stop()` sends nothing either. The log file gets
+  `_DRYRUN` in its name. Only `robot.ip` is needed for the robot; the scene must be measured.
+- `--max-episode-s` caps the wall-clock duration of one episode (`outcome: max_time`).
+- Camera views with `source: synthetic` are rendered from the (virtual or real) joint state and
+  the scene file; the script prints a NOTE when any view is synthetic.
+- Tests: `tests/test_run_live_real.py` (dry run never calls a motion/setter method on a strict
+  fake SDK; the real `XArm6` class runs the loop on `MockXArmSDK`; refusals; max time).

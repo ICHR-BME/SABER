@@ -9,12 +9,22 @@ Examples:
         --interpreter hf:Qwen/Qwen2.5-1.5B-Instruct --text "Pásame el desarmador" --i-am-supervising
     # voice input:
     uv run --extra asr ... --audio command.wav
+    # closed loop on the real arm with the scripted policy, nothing sent (probe-only connection):
+    uv run --extra robot python scripts/run_live.py --policy synthetic --system S0         --text "Pick up the wrench and put it in the tray" --dry-run --max-episode-s 20
+    # same with real motion (measured robot config + scene, minimum speed, e-stop in hand):
+    uv run --extra robot python scripts/run_live.py --policy synthetic --system S0         --text "Pick up the wrench and put it in the tray" --max-episode-s 20 --i-am-supervising
+
+The synthetic policy on the real arm needs a measured scene (configs/scene/phase_a.yaml,
+measured: true): it moves toward the zone coordinates in that file. --dry-run runs cameras ->
+policy -> limits -> watchdog and logs every would-be action without sending it.
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Callable
+from typing import Any
 
 import yaml
 
@@ -23,7 +33,10 @@ from saber.lang.interpreter import HFInterpreter, RuleInterpreter
 from saber.live import LiveConfig, LiveRunner
 from saber.robots.xarm6.config import XArm6Config
 from saber.robots.xarm6.driver import XArm6
+from saber.robots.xarm6.dry_run import DryRunXArm
+from saber.robots.xarm6.kinematics import tcp_position
 from saber.robots.xarm6.mock import MockXArm
+from saber.robots.xarm6.probe import open_readonly_sdk
 from saber.scene import PHASE_A_OBJECTS, SceneLayout
 
 
@@ -45,7 +58,7 @@ def build_policy(spec: str, robot: XArm6, layout: SceneLayout, placement: dict[s
     raise ValueError(spec)
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, sdk_factory: Callable[[str], Any] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--config", default="configs/robot/xarm6_cell.yaml")
     ap.add_argument("--scene", default="configs/scene/phase_a.yaml")
@@ -61,6 +74,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--gate-config", default="configs/experiments/s2_img.yaml")
     ap.add_argument("--k", type=int, default=3)
     ap.add_argument("--max-steps", type=int, default=600)
+    ap.add_argument("--max-episode-s", type=float, default=None, help="wall-clock cap per episode")
+    ap.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="real arm, probe-only connection: run policy + limits, log would-be actions, send nothing",
+    )
     ap.add_argument("--extra-visible", default="", help="e.g. precision_pliers for A1")
     ap.add_argument("--log", default="outputs/live_log.jsonl")
     ap.add_argument("--seed", type=int, default=0)
@@ -81,11 +100,35 @@ def main(argv: list[str] | None = None) -> int:
         if "SYNTHETIC" not in args.log:
             args.log = args.log.replace(".jsonl", "_SYNTHETIC.jsonl")
     else:
-        if args.policy == "synthetic":
-            print("the synthetic policy is only allowed with --mock", file=sys.stderr)
+        if args.policy == "synthetic" and not layout.measured:
+            print(
+                "the synthetic policy on the real arm needs a measured scene "
+                f"({args.scene} has measured: false); use --mock",
+                file=sys.stderr,
+            )
+            return 2
+        if not args.dry_run and not args.i_am_supervising:
+            print("real motion needs --i-am-supervising (or use --dry-run)", file=sys.stderr)
             return 2
         cfg = XArm6Config.from_yaml(args.config)
-        robot = XArm6(cfg, cameras=build_rig(cfg.cameras), allow_motion=args.i_am_supervising)
+        holder: dict[str, XArm6] = {}
+        objects = layout.object_positions(placement)
+
+        def scene_state():  # only used by `source: synthetic` camera views
+            return tcp_position(holder["robot"].joint_positions(), cfg.tcp_offset_m), objects
+
+        if any(v.source == "synthetic" for v in cfg.cameras.views):
+            print("NOTE: some camera views are 'synthetic' (rendered, not real images)")
+        rig = build_rig(cfg.cameras, scene_state=scene_state)
+        factory = sdk_factory or (open_readonly_sdk if args.dry_run else None)
+        if args.dry_run:
+            robot = DryRunXArm(cfg, sdk_factory=factory, cameras=rig)
+            if "DRYRUN" not in args.log:
+                args.log = args.log.replace(".jsonl", "_DRYRUN.jsonl")
+        else:
+            kwargs = {"sdk_factory": factory} if factory else {}
+            robot = XArm6(cfg, cameras=rig, allow_motion=True, **kwargs)
+        holder["robot"] = robot
         realtime = True
 
     asr_hyps = None
@@ -136,7 +179,14 @@ def main(argv: list[str] | None = None) -> int:
     runner = LiveRunner(
         robot,
         policy,
-        LiveConfig(args.system, args.k, max_steps=args.max_steps, visible_objects=visible, realtime=realtime),
+        LiveConfig(
+            args.system,
+            args.k,
+            max_steps=args.max_steps,
+            visible_objects=visible,
+            realtime=realtime,
+            max_episode_s=args.max_episode_s,
+        ),
         interpreter,
         gate,
         parser_act,

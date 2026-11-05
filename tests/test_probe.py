@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 
 import pytest
 
@@ -85,7 +86,8 @@ class StrictFakeSDK:
 
     def get_servo_angle(self, servo_id=None, is_radian=None, is_real=False):
         self._rec("get_servo_angle", is_radian=is_radian)
-        return 0, [0.0, -20.0, -40.0, 0.0, 60.0, 0.0, 0.0]
+        deg = [0.0, -20.0, -40.0, 0.0, 60.0, 0.0, 0.0]
+        return 0, [math.radians(v) for v in deg] if is_radian else deg
 
     def get_position(self, is_radian=None):
         self._rec("get_position", is_radian=is_radian)

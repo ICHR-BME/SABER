@@ -57,6 +57,7 @@ class LiveConfig:
     gripper_closed: float = 0.5
     visible_objects: list[str] | None = None
     realtime: bool = True
+    max_episode_s: float | None = None  # wall-clock cap on one episode
 
 
 def candidates_from(
@@ -151,7 +152,12 @@ class LiveRunner:
         chunk: np.ndarray | None = None
         idx = 0
         outcome = "max_steps"
+        dry_run = bool(getattr(self.robot, "dry_run", False))
+        t_start = time.monotonic()
         while step < self.cfg.max_steps:
+            if self.cfg.max_episode_s is not None and time.monotonic() - t_start > self.cfg.max_episode_s:
+                outcome = "max_time"
+                break
             if self.robot.check_watchdog():
                 outcome = "watchdog"
                 break
@@ -187,6 +193,8 @@ class LiveRunner:
             t_step = time.perf_counter()
             q, g = chunk[idx, :6], float(chunk[idx, 6])
             sent = self.robot.send_action(array_to_action(q, g))
+            if dry_run:
+                self._log({"episode": episode_id, "step": step, "dry_run": True, "would_send": sent})
             if self.robot.last_clip.any:
                 self._log({"episode": episode_id, "step": step, "clip": asdict(self.robot.last_clip)})
             grasped = grasped or sent["gripper.pos"] >= self.cfg.gripper_closed
@@ -200,6 +208,8 @@ class LiveRunner:
             "steps": step,
             "decisions": decisions,
             "instruction": instruction,
+            "dry_run": dry_run,
+            "elapsed_s": time.monotonic() - t_start,
             "final_state": [float(self.robot.get_observation()[k]) for k in ACTION_KEYS],
         }
         self._log({"summary": summary})
