@@ -41,21 +41,34 @@ uv run --extra lerobot python -c "import torch; print(torch.__version__, torch.c
 
 Lee `docs/SAFETY.md` antes. Nunca solo; paro de la celda en la mano.
 
-1. Conecta la laptop a la red del controlador por Ethernet y fija una IP en la misma subred.
-2. Llena en `configs/robot/xarm6_cell.yaml` **con valores medidos**: `robot.ip`, posiciones de la
-   pinza (`open_pos`, `closed_pos`), `controller_safety.collision_sensitivity`,
-   `reduced_max_tcp_speed_mm_s` y `tcp_boundary_mm`. Mientras alguno sea `null`, el driver no
-   se conecta.
-3. Prueba de solo lectura y luego de movimiento (2° en una articulación):
+1. Conecta la laptop al controlador por Ethernet con una IP fija en `192.168.1.0/24` (no `.203`, sin
+   puerta de enlace) y corre `uv run python scripts/net_check.py`.
+2. `robot.ip` ya está en `configs/robot/xarm6_cell.yaml` (`192.168.1.203`, confirmada el 5 nov 2026).
+   Es lo único que necesita el sondeo de solo lectura:
 
 ```bash
 uv run --extra robot python scripts/xarm_check.py
+```
+
+   Solo llama getters (no habilita motores, no limpia errores, no cambia modo). Imprime y guarda en
+   `outputs/sessions/<fecha>/probe_<hora>.json`: firmware, estado, modo, códigos de error y
+   advertencia, articulaciones, pose del TCP del controlador, offset y carga del TCP configurados en
+   el controlador, sensibilidad de colisión, estado del modo reducido / frontera / cerca y la pinza.
+   Compara "TCP (mm, controller)" con "TCP (mm, URDF FK with tcp_offset_m)": deben coincidir en pocos
+   milímetros. Si el offset del TCP del controlador no es el de `tcp_offset_m`, el script lo advierte.
+3. Con el sondeo puedes **medir** la celda (`scripts/measure_cell.py`, ver `docs/RUNBOOK_XARM.md`).
+   Después, un humano copia **valores medidos** a `configs/robot/xarm6_cell.yaml`: posiciones de la
+   pinza (`open_pos`, `closed_pos`), `controller_safety.collision_sensitivity`,
+   `reduced_max_tcp_speed_mm_s` y `tcp_boundary_mm`. Mientras alguno sea `null`, el driver no se
+   conecta en modo de movimiento.
+4. Prueba de movimiento (2° en una articulación; ya **no** es de solo lectura: habilita motores,
+   limpia errores y configura el controlador):
+
+```bash
 uv run --extra robot python scripts/xarm_check.py --i-am-supervising --joint 6
 ```
 
-   Compara "TCP (URDF FK)" con "TCP (controller FK)": deben coincidir en pocos milímetros con la
-   pinza montada. Si no, revisa `tcp_offset_m`.
-4. Sin robot puedes probar todo con `--mock`.
+5. Sin robot puedes probar todo con `--mock`.
 
 ## 3. Cámaras de la celda y de muñeca
 

@@ -137,11 +137,12 @@ def test_mock_boundary_rejects_motion_outside_box():
     assert robot.tcp_position()[2] * 1000 >= 50.0
 
 
-def test_xarm_check_script_mock(capsys):
+def test_xarm_check_script_mock(capsys, tmp_path):
     from scripts.xarm_check import main
 
-    assert main(["--mock"]) == 0
+    assert main(["--mock", "--out-dir", str(tmp_path)]) == 0
     assert "read-only" in capsys.readouterr().out
+    assert list(tmp_path.glob("probe_SYNTHETIC_*.json"))
     assert main(["--mock", "--i-am-supervising", "--joint", "6"]) == 0
     assert main(["--mock", "--degrees", "5"]) == 2
 

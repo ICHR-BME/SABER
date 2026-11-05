@@ -39,7 +39,9 @@ class MockXArmSDK:
     ip: str = "mock"
     joints: np.ndarray = field(default_factory=lambda: np.deg2rad(MOCK_START_DEG))
     gripper_pos: float = MOCK_GRIPPER_OPEN
-    tcp_offset: np.ndarray = field(default_factory=lambda: load_model().gripper_tcp_offset.copy())
+    # TCP offset used by the simulated controller, metres (the SDK property ``tcp_offset`` below
+    # reports it the way the real controller does: mm + deg).
+    tcp_offset_m: np.ndarray = field(default_factory=lambda: load_model().gripper_tcp_offset.copy())
     mode: int = 0
     state: int = 4
     calls: list[tuple] = field(default_factory=list)
@@ -49,6 +51,12 @@ class MockXArmSDK:
     tcp_boundary: list[float] | None = None
     fence: bool = False
     connected: bool = True
+    error_code: int = 0
+    warn_code: int = 0
+    # SYNTHETIC identity values; the real ones come from the controller.
+    version_number: tuple = (0, 0, 0)
+    sn: str = "MOCK-SYNTHETIC"
+    tcp_load: list = field(default_factory=lambda: [0.0, [0.0, 0.0, 0.0]])
 
     def _rec(self, *args: object) -> None:
         self.calls.append(args)
@@ -90,6 +98,43 @@ class MockXArmSDK:
     def get_state(self):
         return 0, self.state
 
+    # --- read-only getters (same names / return shapes as XArmAPI 1.18.4)
+    @property
+    def version(self):
+        return "mock SYNTHETIC"
+
+    def get_version(self):
+        return 0, self.version
+
+    @property
+    def tcp_offset(self):
+        return [float(v) * 1000.0 for v in self.tcp_offset_m] + [0.0, 0.0, 0.0]
+
+    def get_err_warn_code(self, show=False, lang="en"):
+        return 0, [self.error_code, self.warn_code]
+
+    def get_position(self, is_radian=None):
+        return self.get_forward_kinematics(
+            list(self.joints), input_is_radian=True, return_is_radian=bool(is_radian)
+        )
+
+    def get_reduced_mode(self):
+        return 0, int(self.reduced_mode)
+
+    def get_reduced_states(self, is_radian=None):
+        return 0, [
+            int(self.reduced_mode),
+            list(self.tcp_boundary or [0.0] * 6),
+            float(self.reduced_tcp_speed or 0.0),
+            0.0,
+            [],
+            int(self.fence),
+            0,
+        ]
+
+    def get_gripper_version(self):
+        return 0, "0.0.0"
+
     # --- controller safety
     def set_collision_sensitivity(self, value, wait=True):
         self._rec("set_collision_sensitivity", value)
@@ -128,7 +173,7 @@ class MockXArmSDK:
     def _inside_boundary(self, q: np.ndarray) -> bool:
         if not (self.fence and self.tcp_boundary):
             return True
-        p = tcp_position(q, self.tcp_offset) * 1000.0
+        p = tcp_position(q, self.tcp_offset_m) * 1000.0
         x_max, x_min, y_max, y_min, z_max, z_min = self.tcp_boundary
         return x_min <= p[0] <= x_max and y_min <= p[1] <= y_max and z_min <= p[2] <= z_max
 
@@ -151,7 +196,7 @@ class MockXArmSDK:
         q = np.asarray(angles, dtype=float)
         if not input_is_radian:
             q = np.deg2rad(q)
-        t = forward_kinematics(q, self.tcp_offset)
+        t = forward_kinematics(q, self.tcp_offset_m)
         r = t[:3, :3]
         roll = np.arctan2(r[2, 1], r[2, 2])
         pitch = np.arcsin(-np.clip(r[2, 0], -1, 1))
@@ -227,7 +272,7 @@ class MockXArm(XArm6):
         import time
 
         config = config or mock_config()
-        self.sdk = MockXArmSDK(tcp_offset=np.asarray(config.tcp_offset_m, dtype=float))
+        self.sdk = MockXArmSDK(tcp_offset_m=np.asarray(config.tcp_offset_m, dtype=float))
         self.object_positions: dict[str, np.ndarray] = dict(object_positions or {})
         self.attached: str | None = None
         rig: CameraRig = build_rig(config.cameras, scene_state=self._scene_state)
@@ -241,7 +286,7 @@ class MockXArm(XArm6):
         )
 
     def _scene_state(self) -> tuple[np.ndarray, dict[str, np.ndarray]]:
-        return tcp_position(self.sdk.joints, self.sdk.tcp_offset), self.object_positions
+        return tcp_position(self.sdk.joints, self.sdk.tcp_offset_m), self.object_positions
 
     def set_joints(self, q: np.ndarray) -> None:
         """Teleport the simulated arm (tests / episode reset only)."""
@@ -256,7 +301,7 @@ class MockXArm(XArm6):
         """Real driver path, plus a crude SYNTHETIC grasp model: closing the gripper within
         ``GRASP_RADIUS_M`` of an object attaches it to the TCP; opening releases it."""
         sent = super().send_action(action)
-        tcp = tcp_position(self.sdk.joints, self.sdk.tcp_offset)
+        tcp = tcp_position(self.sdk.joints, self.sdk.tcp_offset_m)
         closed = sent["gripper.pos"] >= 0.5
         if closed and self.attached is None and self.object_positions:
             name = min(self.object_positions, key=lambda k: np.linalg.norm(self.object_positions[k] - tcp))

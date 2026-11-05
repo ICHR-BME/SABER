@@ -257,3 +257,56 @@ Phase B already plans n ≥ 100 for key cells.
   sensitivity, reduced TCP speed, TCP boundary, home pose, cell camera sources and scene zones
   stay `null` / synthetic until a human measures them. No "typical" values were filled in.
   `XArm6.connect()` still refuses to connect.
+
+## D11. Read-only probe and verified SDK getters (2026-11-05)
+
+Verified by reading the installed `xarm-python-sdk` 1.18.4 (`uv sync --extra robot`,
+`.venv/Lib/site-packages/xarm/`: `wrapper/xarm_api.py`, `x3/base.py`, `x3/xarm.py`,
+`x3/gripper.py`, `core/config/x_config.py`). `tests/test_probe.py::test_allowlist_matches_installed_sdk`
+checks the names against the installed class when the extra is present.
+
+- **Problem fixed.** `xarm_check.py` without `--i-am-supervising` used to go through
+  `XArm6.connect()` (clean_warn, clean_error, motion_enable, reduced mode, servo mode, motion
+  state, gripper mode/enable). It now uses `saber/robots/xarm6/probe.py`, which needs only
+  `robot.ip`. `--i-am-supervising` keeps the old path and still requires every measured field.
+- **Getters used** (methods return `(code, value)`): `get_version()`, `get_state()`,
+  `get_err_warn_code()` -> `[error, warn]`, `get_servo_angle(is_radian=False)` (7 values on a
+  6-axis arm), `get_position(is_radian=False)` -> `[x, y, z mm, roll, pitch, yaw deg]`,
+  `get_reduced_mode()` -> 0/1, `get_reduced_states(is_radian=False)` -> `[reduced_on,
+  [x_max, x_min, y_max, y_min, z_max, z_min], max_tcp_speed, max_joint_speed, joint_ranges,
+  safety_boundary_on, collision_rebound_on]` (firmware > 1.2.11; first 4 only on older firmware),
+  `get_gripper_position(check_baud=False)` (raw pulses), `get_gripper_version()`, `disconnect()`.
+- **Properties used:** `connected`, `version`, `version_number`, `sn`, `state`, `mode`,
+  `error_code`, `warn_code`, `tcp_offset` (`[x, y, z mm, r, p, y]`), `tcp_load`
+  (`[kg, [x, y, z mm]]`), `collision_sensitivity` (0..5). `mode`, `tcp_offset`, `tcp_load` and
+  `collision_sensitivity` come from the report socket ("only available in socket way and
+  enable_report is True", `tcp_load` / `collision_sensitivity` need `report_type='rich'`, the
+  default), so the probe waits `settle_s = 1.0` s after connecting before reading them.
+- **Not available as a getter:** fence mode has no separate getter; it is read from
+  `get_reduced_states()[5]` (`safety_boundary_is_on`). There is no getter for the reduced TCP
+  speed other than `get_reduced_states()[2]`.
+- **Surprise 1: the SDK's own connect is not read-only.** `XArmAPI(...)` -> `Base.connect()` ->
+  `_check_version(is_first=True)` calls `self.clean_warn()` when `warn_code != 0`. The probe
+  constructs with `do_not_open=True`, sets an instance attribute `api._arm.clean_warn` that
+  only records the call, then calls `api.connect()`. The probe JSON lists it under
+  `sdk_implicit_writes_blocked`. This touches a private attribute (`_arm`) of the pinned SDK;
+  re-check it if the SDK version changes.
+- **Surprise 2: gripper getters can write.** `get_gripper_position` and `get_gripper_version`
+  default to `check_baud=True` -> `checkset_modbus_baud`, which may write the tool Modbus baud rate
+  (`tgpio_addr_w16(0x1A0B, ...)`) and soft-reboot the tool board. The probe passes
+  `baud_checkset=False` to the constructor (makes `checkset_modbus_baud` a no-op) and
+  `check_baud=False` to `get_gripper_position` (the wrapper's `get_gripper_version()` takes no
+  argument, so the constructor flag is what protects it). If the tool baud rate is wrong, the
+  gripper read fails instead of being "fixed"; that failure is reported. The motion driver
+  (`XArm6`, supervised only) keeps the SDK default.
+- Other connect-time activity checked and found read-only: `set_protocol_identifier` is
+  client-side only (`uxbus_cmd_tcp.py`); the timed-comm and report threads send only
+  `get_cmdnum` / `get_state` / `get_err_warn_code`; `disconnect()` only closes sockets;
+  `check_robot_sn` defaults to False (passed explicitly anyway).
+- The probe wraps the SDK object in `ReadOnlySDK`, which raises `ReadOnlyViolation` for any
+  attribute outside the allowlist. Tests use a fake SDK whose setters raise.
+- `MockXArmSDK` gained the same getters (SYNTHETIC values); its internal TCP offset field was
+  renamed `tcp_offset_m` (metres) so that `tcp_offset` matches the SDK property (mm + deg).
+- Output: `outputs/sessions/<YYYY-MM-DD>/probe_<HHMMSS>.json` with `git` (commit + dirty flag)
+  and `config` (sha256 per file, line endings normalized, plus a combined hash), via
+  `saber/session.py`.

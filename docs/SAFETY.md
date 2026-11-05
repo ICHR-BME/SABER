@@ -8,8 +8,8 @@ el sistema como seguro para colaboración.
 ## Antes de la primera sesión en la celda (una vez)
 
 - [ ] Conocer el procedimiento propio de la celda: ubicación del paro, reinicio, reglas de acceso.
-- [ ] Llenar cada `null` de `configs/robot/xarm6_cell.yaml` con valores **medidos**: IP del
-      controlador, posiciones abierta/cerrada de la pinza, sensibilidad de colisión, velocidad TCP
+- [ ] Llenar cada `null` de `configs/robot/xarm6_cell.yaml` con valores **medidos** (la IP del
+      controlador ya está: `192.168.1.203`; se mide con `scripts/measure_cell.py`): posiciones abierta/cerrada de la pinza, sensibilidad de colisión, velocidad TCP
       reducida y caja del TCP `[x_max, x_min, y_max, y_min, z_max, z_min]` (mm, marco de la base)
       que mantenga el TCP sobre la mesa y la cámara de muñeca sin choques. El driver no se conecta
       mientras alguno siga en `null`.
@@ -21,10 +21,17 @@ el sistema como seguro para colaboración.
 
 - [ ] Dos personas en cualquier ejecución autónoma. Una sostiene el paro de la celda todo el tiempo.
 - [ ] Nadie dentro del espacio de trabajo durante un ensayo.
-- [ ] Revisión de solo lectura: `uv run --extra robot python scripts/xarm_check.py` (articulaciones,
-      TCP por FK del URDF y por FK del controlador; deben coincidir en pocos mm).
+- [ ] Sondeo de solo lectura: `uv run --extra robot python scripts/xarm_check.py`. Solo necesita
+      `robot.ip`; construye `XArmAPI` y llama getters (`saber/robots/xarm6/probe.py`): **no** habilita
+      motores, **no** limpia errores ni advertencias, **no** cambia modo ni estado, **no** toca la
+      pinza. Bloquea además dos escrituras implícitas del SDK (el `clean_warn` dentro de `connect()`
+      y el ajuste de baudios de la pinza). Revisa que `error_code` y `warn_code` sean 0 y que el
+      offset del TCP del controlador coincida con `tcp_offset_m` (si no, el script lo advierte).
+      Guarda un JSON en `outputs/sessions/<fecha>/`.
 - [ ] Revisión de movimiento: `uv run --extra robot python scripts/xarm_check.py --i-am-supervising --joint 6`
-      (mueve la articulación 6 dos grados y regresa).
+      (mueve la articulación 6 dos grados y regresa). **Esto ya no es de solo lectura**: pasa por
+      `XArm6.connect()`, que limpia advertencias y errores, habilita los motores, configura el modo
+      reducido, la caja del TCP y el modo servo, y habilita la pinza. Exige todos los valores medidos.
 - [ ] Al conectar, el driver configura: sensibilidad de detección de colisión, velocidad TCP máxima
       reducida, caja del TCP + modo cerca (fence), modo reducido activo y modo servo. Confirma en
       xArm Studio que el modo reducido y la frontera están activos.
