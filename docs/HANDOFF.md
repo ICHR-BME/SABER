@@ -22,6 +22,7 @@ Los modelos visión-lenguaje-acción (VLA) abiertos se entrenan casi solo en ing
 | `docs/SPEEDRUN_PROMPT.md` | Prompt para que Claude Code construya el software | Usar una vez; luego revisar resultados |
 | `CLAUDE.md`, `docs/DECISIONS.md`, `docs/SAFETY.md`, `docs/SETUP.md` | Guía del repo, decisiones y APIs verificadas, checklist de seguridad, instalación | Creados por el speedrun (3 nov 2026) |
 | `prereg/` | Hipótesis y plan de análisis | Borrador, **no congelado** |
+| `docs/RUNBOOK_XARM.md` | Runbook en español para sesiones con el xArm 6: roles, preparación de la laptop, escalera de pruebas, bitácora, problemas comunes, apagado | Creado el 5 nov 2026; **sin probar en el brazo** |
 
 Repositorio: `github.com/ICHR-BME/SABER` (licencia MIT).
 
@@ -76,6 +77,8 @@ Al 3 de noviembre el repositorio solo contenía `LICENSE`. El speedrun de Claude
 | Preregistro | hecho como borrador, **no congelado** (tiene `open_items`) | `prereg/`, `scripts/freeze_prereg.py` | `tests/test_prereg.py` |
 
 ## 6. Lo que tiene que hacer un humano (Claude no puede)
+
+Toda sesión con el brazo sigue `docs/RUNBOOK_XARM.md` (escalera de pruebas, desde el peldaño 1 cada vez).
 
 ### 6.0 Tareas nuevas que encontró el speedrun (3 nov)
 - [ ] **Medir y llenar los valores de la celda** (hoy en `null` a propósito; el driver y la grabación se niegan a correr sin ellos): IP, posiciones abierta/cerrada de la pinza, sensibilidad de colisión, velocidad TCP reducida y caja del TCP en `configs/robot/xarm6_cell.yaml`; centros de las cinco zonas y de la charola en `configs/scene/phase_a.yaml` (las coordenadas actuales son sintéticas).

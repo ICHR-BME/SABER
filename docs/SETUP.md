@@ -39,7 +39,8 @@ uv run --extra lerobot python -c "import torch; print(torch.__version__, torch.c
 
 ## 2. Conexión al xArm 6
 
-Lee `docs/SAFETY.md` antes. Nunca solo; paro de la celda en la mano.
+Lee `docs/SAFETY.md` antes. Nunca solo; paro de la celda en la mano. El procedimiento completo, paso
+a paso y con criterios de "para si", está en **`docs/RUNBOOK_XARM.md`**.
 
 1. Conecta la laptop al controlador por Ethernet con una IP fija en `192.168.1.0/24` (no `.203`, sin
    puerta de enlace) y corre `uv run python scripts/net_check.py`.
