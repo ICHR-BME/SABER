@@ -326,3 +326,21 @@ checks the names against the installed class when the extra is present.
 - A single interface in the controller network that is Wi-Fi is a failure (the controller is cabled).
 - The static-IP commands (`netsh ... static 192.168.1.<x> 255.255.255.0`, `ip addr add`) are only
   printed; `<x>` is chosen by the lab.
+
+## D13. Cell measurement helper `scripts/measure_cell.py` (2026-11-05)
+
+- Probe-only (`ReadOnlySDK` over `open_readonly_sdk`, one connection for the whole session). The
+  operator positions the arm with UFactory Studio; the script reads `get_position(is_radian=False)`,
+  `get_servo_angle(is_radian=False)` and, for `gripper_open` / `gripper_closed`,
+  `get_gripper_position(check_baud=False)` (raw units, as used by `set_gripper_position`).
+- Labels: `home` (joints -> `home_deg`), `table` (TCP at the table surface; hard z minimum),
+  `z1`..`z5`, `tray`, seven suggested `boundary_*` points plus any extra `boundary_<name>`, and
+  the two gripper labels. Any label can be re-measured from the extras prompt.
+- mm -> m conversion is explicit (`mm_to_m`) for `zones_m` / `tray_m`; the zone z is the TCP z
+  at the recorded point (the lab decides whether that is the right height for a zone centre).
+- Proposed `tcp_boundary_mm` = bounding box of the `boundary_*` points grown by `--margin-mm`
+  (default 0), with `z_min = max(box z_min, table z)`; no `z_min` is proposed without a `table`
+  point. It is printed and saved as `PROPOSAL - review with the lab before copying`.
+- Output only to `outputs/cell_measurements_<date>.yaml`; writing under `configs/` is refused.
+  The file records the controller TCP offset at measurement time, the YAML `tcp_offset_m`, git
+  commit and config hash. A TCP offset mismatch is warned at start.
