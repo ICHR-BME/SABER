@@ -49,14 +49,14 @@ def pilot_set(bank: list[Utterance], n: int = 200, seed: int = 0) -> list[Uttera
 
 
 def visible_for(u: Utterance) -> list[str]:
-    """Objects on the table for this condition (A1 adds the precision pliers)."""
+    """Objects on the table for this condition (A1 adds the electrical tape)."""
     base = list(PHASE_A_OBJECTS)
-    return base + ["precision_pliers"] if u.condition == "A1" else base
+    return base + ["electrical_tape"] if u.condition == "A1" else base
 
 
 def score(u: Utterance, interp, ambig_threshold: float) -> dict:
     top = interp.top
-    objs = [o for o in mentioned_objects(top.text) if o != "precision_pliers"]
+    objs = [o for o in mentioned_objects(top.text) if o != "electrical_tape"]
     top_obj = objs[0] if len(objs) == 1 else None
     if u.condition == "O1":
         correct = top.text.strip().upper() == NONE_INSTRUCTION

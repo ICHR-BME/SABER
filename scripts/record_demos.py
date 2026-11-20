@@ -1,4 +1,4 @@
-"""Guided demo recording for T1 ("pick up <object> and put it in the tray").
+"""Guided demo recording for Phase A (T1-R since 2026-11-19: "Move to the <object>", no gripper).
 
 The script tells the operator which goal and zone come next (balanced assignment, held-out zones
 reserved for evaluation), records the episode with every configured camera view, and stores the
@@ -7,6 +7,8 @@ English training instruction and per-episode metadata.
 Examples:
     # fully synthetic, no hardware (MockXArm + scripted teleop):
     uv run python scripts/record_demos.py --mock --teleop synthetic --n-per-goal 2 --out outputs/demos_SYNTHETIC --yes
+    # real arm, scripted reach demos (T1-R, decision 2026-11-19; read docs/SAFETY.md first):
+    uv run --extra robot python scripts/record_demos.py --teleop scripted --operator "<names>" --n-per-goal 17 --out data/datasets/t1r --i-am-supervising
     # real arm with GELLO (read docs/SAFETY.md first):
     uv run python scripts/record_demos.py --teleop gello --operator ian --n-per-goal 50 --out data/datasets/t1 --i-am-supervising
 """
@@ -21,7 +23,7 @@ from pathlib import Path
 import numpy as np
 
 from saber.cameras import build_rig
-from saber.record.protocol import balanced_assignments
+from saber.record.protocol import balanced_assignments, paired_assignments
 from saber.record.recorder import record_episode
 from saber.record.writer import EpisodeMeta, NpzEpisodeWriter, read_episode_meta
 from saber.robots.xarm6.config import XArm6Config
@@ -31,6 +33,21 @@ from saber.scene import PHASE_A_OBJECTS, SceneLayout, canonical_instruction, spa
 
 
 def make_teleop(kind: str, robot: XArm6, assignment, layout: SceneLayout, rng, gello_cfg: str):
+    if kind == "scripted":
+        from saber.teleop.scripted import ScriptedReach
+
+        v_max = robot.config.controller_safety.reduced_max_tcp_speed_mm_s
+        speed = 0.7 * float(v_max) / 1000.0 if v_max else 0.03
+        return ScriptedReach(
+            layout.zones[assignment.zone][:2],
+            float(layout.final_tcp_z_m),
+            robot.config.tcp_offset_m,
+            speed_m_s=speed,
+            dt=1.0 / robot.config.control_hz,
+            rng=rng,
+            joint_lower=robot.config.limits.joint_lower,
+            joint_upper=robot.config.limits.joint_upper,
+        )
     if kind == "synthetic":
         from saber.teleop.synthetic import ScriptedPickPlace
 
@@ -74,11 +91,20 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--config", default="configs/robot/xarm6_cell.yaml")
     ap.add_argument("--scene", default="configs/scene/phase_a.yaml")
     ap.add_argument("--mock", action="store_true")
-    ap.add_argument("--teleop", choices=["gello", "spacemouse", "keyboard", "synthetic"], default="gello")
+    ap.add_argument(
+        "--teleop", choices=["gello", "spacemouse", "keyboard", "synthetic", "scripted"], default="gello"
+    )
     ap.add_argument("--gello-config", default="configs/teleop/gello_xarm6.yaml")
     ap.add_argument("--calibrate-gello", action="store_true")
     ap.add_argument("--n-per-goal", type=int, default=50)
     ap.add_argument("--heldout-frac", type=float, default=0.2)
+    ap.add_argument(
+        "--paired",
+        nargs=2,
+        type=int,
+        metavar=("TRAIN_LAYOUTS", "TEST_LAYOUTS"),
+        help="record every layout once per object (decision 2026-11-20), e.g. --paired 20 4",
+    )
     ap.add_argument("--operator", default="unknown")
     ap.add_argument("--out", required=False, default="outputs/demos")
     ap.add_argument("--writer", choices=["npz", "lerobot"], default="npz")
@@ -105,6 +131,9 @@ def main(argv: list[str] | None = None) -> int:
         cfg = XArm6Config.from_yaml(args.config)
         robot = XArm6(cfg, cameras=build_rig(cfg.cameras), allow_motion=args.i_am_supervising)
         realtime = True
+    if args.teleop == "scripted" and layout.final_tcp_z_m is None:
+        print("refusing: --teleop scripted needs t1r_final_tcp_z_m in the scene config", file=sys.stderr)
+        return 2
     synthetic = args.mock or args.teleop == "synthetic"
     out = Path(args.out)
     if synthetic and "SYNTHETIC" not in out.name:
@@ -116,9 +145,12 @@ def main(argv: list[str] | None = None) -> int:
             calibrate_gello(robot, args.gello_config)
             return 0
         goals = list(PHASE_A_OBJECTS)
-        plan = balanced_assignments(
-            goals, list(layout.zones), args.n_per_goal, layout.heldout_zones, args.heldout_frac, args.seed
-        )
+        if args.paired:
+            plan = paired_assignments(goals, list(layout.zones), args.paired[0], args.paired[1], args.seed)
+        else:
+            plan = balanced_assignments(
+                goals, list(layout.zones), args.n_per_goal, layout.heldout_zones, args.heldout_frac, args.seed
+            )
         views = {v.name: (v.height, v.width, 3) for v in robot.config.cameras.views}
         if args.writer == "lerobot":
             from saber.record.writer import LeRobotEpisodeWriter
@@ -133,25 +165,44 @@ def main(argv: list[str] | None = None) -> int:
         (out / "meta" / "protocol.json").write_text(
             json.dumps([a.__dict__ for a in plan], indent=1, ensure_ascii=False), encoding="utf-8"
         )
-        rng = np.random.default_rng(args.seed)
+        home = None
+        if args.teleop == "scripted" and robot.config.home_deg is not None:
+            from saber.teleop.scripted import go_home
+
+            home = np.deg2rad(np.asarray(robot.config.home_deg, dtype=float))
+            print("Llevando el brazo a home...")
+            go_home(robot, home, realtime=realtime)
+            robot.pause()
+        last_layout = None
         for a in plan:
             if a.index in done:
                 continue
-            others = ", ".join(f"{spanish_name(o)} -> {z}" for o, z in a.placement.items() if o != a.goal)
+            same_layout = last_layout is not None and a.placement == last_layout
             print(
                 f"\nEpisodio {a.index + 1}/{len(plan)} [{a.split}]: objetivo = {spanish_name(a.goal)} en {a.zone}"
             )
-            print(f"  Coloca tambien: {others}")
-            if not args.yes:
+            if same_layout:
+                print("  Mismo acomodo que el anterior: NO muevas nada.")
+            else:
+                where = ", ".join(
+                    f"{spanish_name(o)} -> {z}" for o, z in sorted(a.placement.items(), key=lambda t: t[1])
+                )
+                print(f"  NUEVO ACOMODO: {where}")
+            last_layout = a.placement
+            if not args.yes and not (args.paired and same_layout):
                 ans = input("  Enter para grabar, 's' para saltar, 'x' para terminar: ").strip().lower()
                 if ans == "x":
                     break
                 if ans == "s":
                     continue
+            if home is not None:
+                robot.resume()
             positions = layout.object_positions(a.placement)
             if isinstance(robot, MockXArm):
                 robot.reset_scene(positions)
-            teleop = make_teleop(args.teleop, robot, a, layout, rng, args.gello_config)
+            # One generator per episode: resuming an interrupted run must not reuse earlier draws.
+            ep_rng = np.random.default_rng([args.seed, a.index])
+            teleop = make_teleop(args.teleop, robot, a, layout, ep_rng, args.gello_config)
             teleop.connect()
             meta = EpisodeMeta(
                 episode_index=a.index,
@@ -164,12 +215,20 @@ def main(argv: list[str] | None = None) -> int:
                 instruction=canonical_instruction(a.goal),
                 teleop=args.teleop,
                 synthetic=synthetic,
+                extra=dict(a.extra),
             )
             try:
                 res = record_episode(robot, teleop, writer, meta, args.max_steps, realtime=realtime)
             finally:
                 teleop.disconnect()
             print(f"  -> {res.n_frames} cuadros ({res.ended_by})")
+            if hasattr(teleop, "describe"):
+                with open(out / "meta" / "scripted_paths.jsonl", "a", encoding="utf-8") as f:
+                    rec = {"episode_index": a.index, "ended_by": res.ended_by, **teleop.describe()}
+                    f.write(json.dumps(rec) + "\n")
+            if home is not None:
+                go_home(robot, home, realtime=realtime)
+                robot.pause()  # stopped while the operator rearranges the objects
         writer.finalize()
         print("dataset:", out)
         return 0

@@ -44,7 +44,7 @@ a paso y con criterios de "para si", está en **`docs/RUNBOOK_XARM.md`**.
 
 1. Conecta la laptop al controlador por Ethernet con una IP fija en `192.168.1.0/24` (no `.203`, sin
    puerta de enlace) y corre `uv run python scripts/net_check.py`.
-2. `robot.ip` ya está en `configs/robot/xarm6_cell.yaml` (`192.168.1.203`, confirmada el 5 nov 2026).
+2. `robot.ip` ya está en `configs/robot/xarm6_cell.yaml` (`192.168.1.226`, confirmada el 5 nov 2026).
    Es lo único que necesita el sondeo de solo lectura:
 
 ```bash

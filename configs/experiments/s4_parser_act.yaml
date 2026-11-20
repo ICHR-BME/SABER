@@ -1,7 +1,7 @@
 # S4: rule parser over the fixed vocabulary + one ACT policy per object.
 system: S4
 act_policies:
-  screwdriver: outputs/train/act_xarm6_screwdriver/checkpoints/last/pretrained_model
-  pliers: outputs/train/act_xarm6_pliers/checkpoints/last/pretrained_model
-  wrench: outputs/train/act_xarm6_wrench/checkpoints/last/pretrained_model
+  stepper_motor: outputs/train/act_xarm6_stepper_motor/checkpoints/last/pretrained_model
+  tape_measure: outputs/train/act_xarm6_tape_measure/checkpoints/last/pretrained_model
+  fan: outputs/train/act_xarm6_fan/checkpoints/last/pretrained_model
 trials: {E0: 40, S2: 40}

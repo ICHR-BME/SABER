@@ -70,7 +70,7 @@ def test_sync_rejects_skew():
 
 def test_rig_from_yaml_with_configurable_views():
     cfg = CameraRigConfig.from_yaml("configs/cameras/cell.yaml")
-    assert [v.name for v in cfg.views] == ["wrist", "cell_front"]
+    assert "wrist" in [v.name for v in cfg.views]  # real cell config (2026-11-19: wrist on USB)
     cfg3 = CameraRigConfig.from_dict(
         {
             "views": {
@@ -78,7 +78,9 @@ def test_rig_from_yaml_with_configurable_views():
             }
         }
     )
-    rig = build_rig(cfg3, scene_state=lambda: (np.array([0.4, 0, 0.1]), {"pliers": np.array([0.4, 0.1, 0])}))
+    rig = build_rig(
+        cfg3, scene_state=lambda: (np.array([0.4, 0, 0.1]), {"tape_measure": np.array([0.4, 0.1, 0])})
+    )
     rig.connect()
     frames = rig.read()
     assert set(frames) == {"cam0", "cam1", "cam2"}
@@ -87,6 +89,27 @@ def test_rig_from_yaml_with_configurable_views():
 
 
 def test_synthetic_view_requires_scene():
-    cfg = CameraRigConfig.from_yaml("configs/cameras/cell.yaml")
+    cfg = CameraRigConfig.from_dict(
+        {"views": {"wrist": {"source": "synthetic", "width": 32, "height": 24, "fps": 10}}}
+    )
     with pytest.raises(ValueError):
         build_rig(cfg)
+
+
+def test_clip_tcp_step_caps_cartesian_step():
+    """A 2 deg step can move the TCP ~26 mm; the cap keeps it under reduced speed / control rate."""
+    from saber.robots.xarm6.kinematics import tcp_position
+    from saber.safety.limits import clip_tcp_step
+
+    off = np.array([0.0567, 0.0, 0.0])
+    q0 = np.radians([-2.0, -45.4, -36.1, 1.7, 79.8, -0.5])
+    q1 = q0 + np.radians([0.85, 2.0, 2.0, -0.14, -2.0, 0.69])
+    fn = lambda q: tcp_position(q, off)  # noqa: E731
+    assert np.linalg.norm(fn(q1) - fn(q0)) > 0.01
+    max_step = 0.8 * 50.0 / 1000.0 / 15.0  # 50 mm/s at 15 Hz, 80 %
+    q, clipped = clip_tcp_step(q1, q0, fn, max_step)
+    assert clipped
+    assert np.linalg.norm(fn(q) - fn(q0)) <= max_step + 1e-6
+    q_small = q0 + np.radians([0.01, 0, 0, 0, 0, 0])
+    q2, clipped2 = clip_tcp_step(q_small, q0, fn, max_step)
+    assert not clipped2 and np.allclose(q2, q_small)

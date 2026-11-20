@@ -194,6 +194,7 @@ def test_tcp_offset_mismatch():
 def test_connect_still_refuses_unmeasured_fields_with_ip_set():
     cfg = XArm6Config.from_yaml("configs/robot/xarm6_cell.yaml")
     assert cfg.ip
+    cfg.controller_safety.reduced_max_tcp_speed_mm_s = None  # one unmeasured field is enough
     robot = XArm6(cfg, sdk_factory=lambda ip: pytest.fail("must not reach the SDK"))
     with pytest.raises(XArmError, match="unmeasured"):
         robot.connect()
@@ -202,14 +203,16 @@ def test_connect_still_refuses_unmeasured_fields_with_ip_set():
 def test_xarm_check_probe_only_without_supervising(tmp_path, capsys):
     from scripts.xarm_check import main
 
-    sdk = StrictFakeSDK()
+    # Fake controller configured with the same TCP offset as the cell YAML (no offset WARNING).
+    yaml_off_mm = XArm6Config.from_yaml("configs/robot/xarm6_cell.yaml").tcp_offset_m * 1000.0
+    sdk = StrictFakeSDK(tcp_offset=(*yaml_off_mm.tolist(), 0.0, 0.0, 0.0))
     assert main(["--out-dir", str(tmp_path)], sdk_factory=lambda ip: sdk) == 0
     out = capsys.readouterr().out
     assert "read-only" in out and "WARNING" not in out
     assert {c[0] for c in sdk.calls} <= ALLOWED_METHODS
     (path,) = tmp_path.glob("probe_*.json")
     rec = json.loads(path.read_text(encoding="utf-8"))
-    assert rec["probe"]["ip"] == "192.168.1.203"
+    assert rec["probe"]["ip"] == "192.168.1.226"
     assert "commit" in rec["git"]
     assert len(rec["config"]["combined_sha256"]) == 64
     assert any(k.endswith("xarm6_cell.yaml") for k in rec["config"]["files"])
@@ -224,10 +227,19 @@ def test_xarm_check_warns_on_tcp_offset_mismatch(tmp_path, capsys):
 
 
 def test_xarm_check_supervising_still_needs_measured_config(tmp_path):
+    import yaml
+
     from scripts.xarm_check import main
 
+    raw = yaml.safe_load(open("configs/robot/xarm6_cell.yaml", encoding="utf-8"))
+    raw["controller_safety"]["tcp_boundary_mm"] = None
+    cfg_path = tmp_path / "unmeasured.yaml"
+    cfg_path.write_text(yaml.safe_dump(raw), encoding="utf-8")
     with pytest.raises(XArmError, match="unmeasured"):
-        main(["--i-am-supervising"], sdk_factory=lambda ip: pytest.fail("must not reach the SDK"))
+        main(
+            ["--i-am-supervising", "--config", str(cfg_path)],
+            sdk_factory=lambda ip: pytest.fail("must not reach the SDK"),
+        )
 
 
 def test_allowlist_matches_installed_sdk():

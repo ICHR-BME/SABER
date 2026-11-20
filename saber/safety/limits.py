@@ -73,10 +73,37 @@ class ClipReport:
     joint_limit_clipped: bool = False
     step_clipped: bool = False
     gripper_clipped: bool = False
+    tcp_step_clipped: bool = False
 
     @property
     def any(self) -> bool:
-        return self.joint_limit_clipped or self.step_clipped or self.gripper_clipped
+        return self.joint_limit_clipped or self.step_clipped or self.gripper_clipped or self.tcp_step_clipped
+
+
+def clip_tcp_step(
+    q: np.ndarray,
+    q_current: np.ndarray,
+    tcp_fn: Callable[[np.ndarray], np.ndarray],
+    max_step_m: float,
+    iters: int = 4,
+) -> tuple[np.ndarray, bool]:
+    """Shrink the joint step so the TCP moves at most ``max_step_m`` this control step.
+
+    Keeps servo targets under the controller's reduced TCP speed (reduced speed / control rate).
+    Real arm 2026-11-19: 2 deg joint steps at 15 Hz moved the camera ~26 mm per step (~390 mm/s)
+    while the controller limit was 50 mm/s, and set_servo_angle_j started failing.
+    """
+    q = np.asarray(q, dtype=float)
+    q_current = np.asarray(q_current, dtype=float)
+    p0 = np.asarray(tcp_fn(q_current), dtype=float)
+    clipped = False
+    for _ in range(iters):
+        d = float(np.linalg.norm(np.asarray(tcp_fn(q), dtype=float) - p0))
+        if d <= max_step_m:
+            break
+        clipped = True
+        q = q_current + (q - q_current) * (max_step_m / d) * 0.99
+    return q, clipped
 
 
 def clip_action(
@@ -118,6 +145,11 @@ class Watchdog:
 
     def kick(self) -> None:
         self._last = self.clock()
+        self.tripped = False
+
+    def disarm(self) -> None:
+        """Stop watching until the next ``kick`` (e.g. while the arm is deliberately paused)."""
+        self._last = None
         self.tripped = False
 
     def check(self) -> bool:

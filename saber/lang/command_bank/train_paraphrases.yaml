@@ -1,27 +1,27 @@
-# Spanish / Spanglish TRAINING paraphrases for system S3 (relabelled fine-tune).
+# Spanish / Spanglish TRAINING paraphrases for system S3 (relabelled fine-tune), T1-R objects.
 # Must never overlap the evaluation bank (phase_a.yaml); scripts/relabel_dataset.py checks it.
 # ALL DRAFTS: status draft_needs_native_review.
 status: draft_needs_native_review
-drafted_by: claude-opus-5-5 (LLM draft, 2026-11-03)
+drafted_by: claude-opus-5-5 (LLM draft, 2026-11-19)
 paraphrases:
-  screwdriver:
-    - Recoge el destornillador y llévalo a la charola
-    - Quiero el desarmador dentro de la charola
-    - Lleva el desarmador hasta la charola
-    - Mete el screwdriver en la bandeja
-    - Deja el desarmador en la charola, porfa
-    - Agarra el desarmador y déjalo en la bandeja
-  pliers:
-    - Recoge las pinzas y llévalas a la charola
-    - Quiero las pinzas dentro de la charola
-    - Lleva las pinzas hasta la charola
-    - Mete las pliers en la bandeja
-    - Deja las pinzas en la charola, porfa
-    - Agarra las pinzas y déjalas en la bandeja
-  wrench:
-    - Recoge la llave y llévala a la charola
-    - Quiero la llave dentro de la charola
-    - Lleva la llave hasta la charola
-    - Mete el wrench en la bandeja
-    - Deja la llave en la charola, porfa
-    - Agarra la llave y déjala en la bandeja
+  tape_measure:
+  - Lleva la cámara al flexómetro
+  - Quiero la cámara arriba del flexómetro
+  - Posiciónate encima de la cinta métrica
+  - Muévete hasta el flexo, porfa
+  - Ve directo al tape measure
+  - Colócate sobre el metro
+  stepper_motor:
+  - Lleva la cámara al motor a pasos
+  - Quiero la cámara arriba del motor
+  - Posiciónate encima del motor paso a paso
+  - Muévete hasta el motorcito, porfa
+  - Ve directo al stepper motor
+  - Colócate sobre el stepper
+  fan:
+  - Lleva la cámara al ventilador
+  - Quiero la cámara arriba del abanico
+  - Posiciónate encima del ventilador
+  - Muévete hasta el abanico, porfa
+  - Ve directo al blower
+  - Colócate sobre el fan

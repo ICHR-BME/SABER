@@ -10,7 +10,7 @@ from saber.robots.xarm6.mock import MockXArmSDK
 from saber.scene import REPO_ROOT
 from tests.test_probe import StrictFakeSDK
 
-TEXT = "Pick up the wrench and put it in the tray"
+TEXT = "Move to the fan"
 
 
 def measured_scene(tmp_path):
@@ -67,6 +67,7 @@ def test_dry_run_never_calls_motion_methods(tmp_path):
     log = tmp_path / "live.jsonl"
     argv = ["--policy", "synthetic", "--system", "S0", "--text", TEXT, "--dry-run"]
     argv += ["--scene", str(measured_scene(tmp_path)), "--max-steps", "15", "--log", str(log)]
+    argv += ["--config", str(full_robot_config(tmp_path))]  # synthetic cameras: no USB device in CI
     assert main(argv, sdk_factory=lambda ip: sdk) == 0
     names = {c[0] for c in sdk.calls}
     assert not any(n.startswith(("set_", "clean_", "motion_", "emergency")) for n in names)
@@ -91,10 +92,14 @@ def test_synthetic_policy_runs_on_real_driver_class(tmp_path):
     assert read_log(log)[-1]["summary"]["steps"] == 10
 
 
-def test_synthetic_policy_refuses_unmeasured_scene():
+def test_synthetic_policy_refuses_unmeasured_scene(tmp_path):
     from scripts.run_live import main
 
-    assert main(["--policy", "synthetic", "--text", TEXT, "--dry-run"]) == 2
+    raw = yaml.safe_load((REPO_ROOT / "configs/scene/phase_a.yaml").read_text(encoding="utf-8"))
+    raw["measured"] = False
+    scene = tmp_path / "placeholder_scene.yaml"
+    scene.write_text(yaml.safe_dump(raw), encoding="utf-8")
+    assert main(["--policy", "synthetic", "--text", TEXT, "--dry-run", "--scene", str(scene)]) == 2
 
 
 def test_real_motion_needs_supervision(tmp_path):

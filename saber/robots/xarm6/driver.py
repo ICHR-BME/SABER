@@ -22,7 +22,7 @@ import numpy as np
 from saber.cameras.base import CameraRig
 from saber.robots.xarm6.config import XArm6Config
 from saber.robots.xarm6.kinematics import N_JOINTS, tcp_position
-from saber.safety.limits import ClipReport, Watchdog, clip_action
+from saber.safety.limits import ClipReport, Watchdog, clip_action, clip_tcp_step
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +41,11 @@ class XArmError(RuntimeError):
     pass
 
 
-def _check(code: int, what: str) -> None:
+def _check(code: Any, what: str) -> None:
+    # Most XArmAPI setters return an int, but some return the raw command reply, a list whose first
+    # element is the code (xarm-python-sdk 1.18.4 set_fence_mode returns [0] on success).
+    if isinstance(code, (list, tuple)):
+        code = code[0] if code else None
     if code != 0:
         raise XArmError(f"xArm SDK call {what} failed with code {code}")
 
@@ -165,6 +169,22 @@ class XArm6:
         _check(self.arm.set_reduced_mode(True), "set_reduced_mode")
         _check(self.arm.set_mode(MODE_SERVO), "set_mode(servo)")
         _check(self.arm.set_state(STATE_MOTION), "set_state(motion)")
+        self._wait_for_servo_mode()
+
+    def _wait_for_servo_mode(self, timeout_s: float = 2.0) -> None:
+        """Wait until the controller reports servo mode; servo targets sent before that are ignored.
+
+        Seen on the real arm 2026-11-19: right after set_mode(1) + set_state(0) the report still said
+        mode 0 and the SDK warned "The mode may be incorrect" on every set_servo_angle_j.
+        """
+        deadline = time.monotonic() + timeout_s
+        while True:
+            mode = getattr(self.arm, "mode", MODE_SERVO)
+            if mode == MODE_SERVO:
+                return
+            if time.monotonic() > deadline:
+                raise XArmError(f"controller still reports mode {mode} (expected servo mode {MODE_SERVO})")
+            time.sleep(0.05)
 
     def joint_positions(self) -> np.ndarray:
         code, angles = self.arm.get_servo_angle(is_radian=True)
@@ -199,6 +219,13 @@ class XArm6:
         q_target, g_target = action_to_array(action)
         q_now = self.joint_positions()
         q, g, rep = clip_action(q_target, q_now, g_target, self.config.limits)
+        v_max = self.config.controller_safety.reduced_max_tcp_speed_mm_s
+        if v_max:
+            # Stay at 80 % of the controller's reduced TCP speed for one control period.
+            max_step_m = 0.8 * float(v_max) / 1000.0 / float(self.config.control_hz)
+            q, rep.tcp_step_clipped = clip_tcp_step(
+                q, q_now, lambda qq: tcp_position(qq, self.config.tcp_offset_m), max_step_m
+            )
         self.last_clip = rep
         _check(self.arm.set_servo_angle_j([float(v) for v in q], is_radian=True), "set_servo_angle_j")
         if self.config.gripper.installed and (
@@ -216,6 +243,27 @@ class XArm6:
     def check_watchdog(self) -> bool:
         """Call from the control loop; stops the arm if the policy stopped responding."""
         return self.watchdog.check()
+
+    def pause(self) -> None:
+        """Stop the arm on purpose between episodes (someone may reach into the cell) and disarm the
+        watchdog, so waiting for the operator does not count as a policy that stopped responding.
+
+        Real arm 2026-11-19: waiting at the record_demos prompt after the first demo tripped the
+        0.5 s watchdog and the next episodes recorded 0 frames.
+        """
+        if self.arm is not None:
+            _check(self.arm.set_state(STATE_STOP), "set_state(stop)")
+        self.watchdog.disarm()
+
+    def resume(self) -> None:
+        """Back to servo mode after ``pause()`` (or a watchdog stop)."""
+        if self.arm is None:
+            raise XArmError("not connected")
+        _check(self.arm.set_mode(MODE_SERVO), "set_mode(servo)")
+        _check(self.arm.set_state(STATE_MOTION), "set_state(motion)")
+        self._wait_for_servo_mode()
+        self.watchdog.disarm()
+        self.stopped = False
 
     def stop(self) -> None:
         if self.arm is not None and not self.stopped:

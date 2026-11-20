@@ -7,7 +7,7 @@ The operator moves the arm with UFactory Studio (jog, or manual / hand-guiding m
 controller TCP pose (mm, deg), the joints (deg) and, for the gripper labels, the raw gripper
 position. It never moves or configures the arm (saber/robots/xarm6/probe.py).
 
-Labels: home, table (TCP at the table surface), z1..z5, tray, boundary_* (reachable extremes,
+Labels: home, table (TCP at the table surface), z1..z6, tray, boundary_* (reachable extremes,
 points just above the table and near the wrist camera), gripper_open, gripper_closed.
 
 Output: outputs/cell_measurements_<date>.yaml (never configs/). It also prints a PROPOSED
@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import sys
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -32,7 +33,7 @@ from saber.robots.xarm6.probe import ReadOnlySDK, first_six, open_readonly_sdk, 
 from saber.scene import REPO_ROOT
 from saber.session import config_hash, git_commit
 
-ZONES = [f"z{i}" for i in range(1, 6)]
+ZONES = [f"z{i}" for i in range(1, 7)]  # 6 taped cells in the cell (2026-11-19)
 DEFAULT_LABELS = (
     ["home", "table", *ZONES, "tray"]
     + [
@@ -188,6 +189,8 @@ def main(
     raw = (sdk_factory or open_readonly_sdk)(ip)
     sdk = ReadOnlySDK(raw)
     try:
+        if sdk_factory is None:
+            time.sleep(1.0)  # tcp_offset comes from the report stream; read too early it is all zeros
         ctrl_offset = sdk.tcp_offset
         msg = tcp_offset_mismatch({"controller_tcp_offset_mm_deg": ctrl_offset}, cfg.tcp_offset_m)
         if msg:

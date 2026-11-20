@@ -1,0 +1,20 @@
+# SmolVLA fine-tune on the PAIRED T1-R demos (each layout once per object; decision 2026-11-20). English only.
+# Ian's laptop (RTX 5060 Laptop, 8 GB). Measured 2026-11-19 on the 200-step test: batch 8 fits,
+# ~0.28 s per update (3.5 steps/s) -> 30k steps is roughly 2.3-2.5 h (estimate from that test).
+# 30k steps x 8 = 240k samples, ~26 passes over the 9063 training frames. 30k also matches the
+# smolvla_base cosine-decay length, so the LR schedule is not rescaled.
+#   uv run --extra lerobot python scripts/train_policy.py configs/train/smolvla_xarm6_t1r_paired_en.yaml --run
+policy: smolvla
+# Local copy of lerobot/smolvla_base (Windows: the Hub id fails, see docs/DECISIONS.md).
+init_from: models/smolvla_base
+dataset_repo_id: local/saber_t1r_paired
+dataset_root: data/datasets/t1r_paired_lerobot
+steps: 30000
+batch_size: 8
+save_freq: 5000
+device: cuda
+output_dir: outputs/train/smolvla_t1r_paired_en
+extra_args:
+  - '--rename_map={"observation.images.wrist": "observation.images.camera1"}'
+  - "--num_workers=2"
+  - "--log_freq=100"

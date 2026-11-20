@@ -2,17 +2,17 @@
 
 Examples:
     # synthetic end-to-end on the mock (no GPU, no robot):
-    uv run python scripts/run_live.py --mock --system S2 --text "Pásame las pinzas" --log outputs/live_SYNTHETIC.jsonl
+    uv run python scripts/run_live.py --mock --system S2 --text "Pásame la cinta" --log outputs/live_SYNTHETIC.jsonl
     # real arm, SmolVLA checkpoint, local interpreter, IMG gate (read docs/SAFETY.md):
     uv run --extra lerobot --extra interp python scripts/run_live.py --system S2 \
         --policy smolvla:outputs/train/smolvla_xarm6_en/checkpoints/last/pretrained_model \
-        --interpreter hf:Qwen/Qwen2.5-1.5B-Instruct --text "Pásame el desarmador" --i-am-supervising
+        --interpreter hf:Qwen/Qwen2.5-1.5B-Instruct --text "Pásame el motor a pasos" --i-am-supervising
     # voice input:
     uv run --extra asr ... --audio command.wav
     # closed loop on the real arm with the scripted policy, nothing sent (probe-only connection):
-    uv run --extra robot python scripts/run_live.py --policy synthetic --system S0         --text "Pick up the wrench and put it in the tray" --dry-run --max-episode-s 20
+    uv run --extra robot python scripts/run_live.py --policy synthetic --system S0         --text "Move to the fan" --dry-run --max-episode-s 20
     # same with real motion (measured robot config + scene, minimum speed, e-stop in hand):
-    uv run --extra robot python scripts/run_live.py --policy synthetic --system S0         --text "Pick up the wrench and put it in the tray" --max-episode-s 20 --i-am-supervising
+    uv run --extra robot python scripts/run_live.py --policy synthetic --system S0         --text "Move to the fan" --max-episode-s 20 --i-am-supervising
 
 The synthetic policy on the real arm needs a measured scene (configs/scene/phase_a.yaml,
 measured: true): it moves toward the zone coordinates in that file. --dry-run runs cameras ->
@@ -62,14 +62,14 @@ def main(argv: list[str] | None = None, sdk_factory: Callable[[str], Any] | None
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--config", default="configs/robot/xarm6_cell.yaml")
     ap.add_argument("--scene", default="configs/scene/phase_a.yaml")
-    ap.add_argument("--placement", default="screwdriver=z1,pliers=z3,wrench=z4")
+    ap.add_argument("--placement", default="tape_measure=z1,stepper_motor=z4,fan=z6")
     ap.add_argument("--mock", action="store_true")
     ap.add_argument("--system", choices=["S0", "S1", "S2", "S3", "S4"], default="S1")
     ap.add_argument("--text")
     ap.add_argument("--audio")
     ap.add_argument("--asr-model", default="large-v3-turbo")
     ap.add_argument("--policy", default="synthetic", help="synthetic | smolvla:<path> | act:<path>")
-    ap.add_argument("--act-policies", help="S4: screwdriver=<path>,pliers=<path>,wrench=<path>")
+    ap.add_argument("--act-policies", help="S4: tape_measure=<path>,stepper_motor=<path>,fan=<path>")
     ap.add_argument("--interpreter", default="rule", help="rule | hf:<model_id>")
     ap.add_argument("--gate-config", default="configs/experiments/s2_img.yaml")
     ap.add_argument("--k", type=int, default=3)
@@ -80,7 +80,7 @@ def main(argv: list[str] | None = None, sdk_factory: Callable[[str], Any] | None
         action="store_true",
         help="real arm, probe-only connection: run policy + limits, log would-be actions, send nothing",
     )
-    ap.add_argument("--extra-visible", default="", help="e.g. precision_pliers for A1")
+    ap.add_argument("--extra-visible", default="", help="e.g. electrical_tape for A1")
     ap.add_argument("--log", default="outputs/live_log.jsonl")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--i-am-supervising", action="store_true")

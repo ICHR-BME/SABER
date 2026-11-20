@@ -375,3 +375,71 @@ checks the names against the installed class when the extra is present.
   the scene file; the script prints a NOTE when any view is synthetic.
 - Tests: `tests/test_run_live_real.py` (dry run never calls a motion/setter method on a strict
   fake SDK; the real `XArm6` class runs the loop on `MockXArmSDK`; refusals; max time).
+
+## 2026-11-19: controller IP changed
+
+Ian reports the xArm 6 controller is now at `192.168.1.226` (was `192.168.1.203` on 2026-11-05). Updated `configs/robot/xarm6_cell.yaml`, the `net_check.py` default, the two config-reading tests, and the Spanish docs.
+
+## 2026-11-19: SDK setters that return a list
+
+On the real arm, `XArmAPI.set_fence_mode(True)` (xarm-python-sdk 1.18.4) returned `[0]`, the raw command reply, and `_check` treated it as a failure. `_check` now takes the first element of a list/tuple reply. Test: `tests/test_xarm6.py::test_check_accepts_list_return_codes`.
+
+## 2026-11-19: wait for servo mode; xarm_check verifies the joint moved
+
+On the real arm, a second `xarm_check --joint 5` printed SDK warnings "The mode may be incorrect ... mode: 1 (0)" while streaming `set_servo_angle_j`: the controller report still said position mode, so the targets were probably ignored, and "final = initial" could not distinguish that from a correct move. `XArm6.configure()` now waits up to 2 s for the controller to report servo mode and raises otherwise; `xarm_check.py` measures the joint displacement at the turn and fails if it is below half the commanded angle.
+
+## 2026-11-19: camera_check read settings after disconnect
+
+On Windows with a real USB camera, `camera_check.py` crashed (`AssertionError` in `OpenCVCamera.actual_settings`) because it asked for the negotiated width/height/fps after `rig.disconnect()`. The settings are now read right after connecting. Not covered by a test: the existing fakes have no `actual_settings`.
+
+## 2026-11-19: 15 Hz control and 15 fps camera
+
+The wrist webcam measured 18.8 fps when asked for 30 (`camera_check_135337.json`). Ian decided to run everything at 15: `control_hz: 15` in `configs/robot/xarm6_cell.yaml`, `fps: 15` for the wrist view. `max_step_deg` stays 2.0 per step, now 30 deg/s. Demos, training data and trials must all use 15 Hz; a SmolVLA chunk of 50 steps now spans ~3.3 s.
+
+## 2026-11-19: TCP step cap at 80 % of the reduced TCP speed
+
+First closed-loop run on the real arm (`run_live --policy synthetic`): the arm moved ~13 mm, then `set_servo_angle_j` returned 1 (controller reply: uncleared error). The probe afterwards showed error_code 0, so the controller code was not captured (check the UFactory Studio error log). Likely cause: joint steps of up to 2 deg at 15 Hz moved the camera ~26 mm per step (~390 mm/s) with the controller in reduced mode at 50 mm/s. `XArm6.send_action` now also shrinks each step so the TCP moves at most 0.8 x reduced speed / control_hz (2.7 mm per step at 50 mm/s, 15 Hz); `ClipReport.tcp_step_clipped` logs it. The mock config has no reduced speed, so the cap is off there; `tests/test_safety_cameras.py::test_clip_tcp_step_caps_cartesian_step` covers it.
+
+## 2026-11-19: T1-R instruction and scripted demos (Ian)
+
+- Canonical English instruction is now "Move to the <object>" (`saber/scene.py::canonical_instruction`, E0 entries of the command bank, rule/HF interpreter). The Spanish/Spanglish drafts in the command bank still describe the old pick-and-place T1 and must be rewritten for T1-R before any Spanish trial.
+- Demos are scripted, not teleoperated: `scripts/record_demos.py --teleop scripted` uses `saber/teleop/scripted.py::ScriptedReach`. Home -> random via point (goal + N(0, 3 cm) in xy, 8 cm above the final height) -> goal xy + N(0, 5 mm) at `t1r_final_tcp_z_m` (95.1 mm), camera looking down, 1 s hold; speed 0.7 x reduced TCP speed (35 mm/s). The arm returns home between episodes (not recorded). Via/final points per episode go to `meta/scripted_paths.jsonl`. Images and joint states are real. Paper caveat: scripted demos are less varied than human teleoperation.
+- IK check: all six zones are reachable at 95.1 mm with the camera down; the joint-space path back home never goes below the final height.
+
+## 2026-11-19: Phase A objects changed (Ian)
+
+The cell has no screwdriver / pliers / wrench at hand. Phase A now uses **tape measure** (`tape_measure`, "tape measure"; flexómetro, cinta métrica, metro), **stepper motor** (`stepper_motor`, "stepper motor"; motor a pasos, motor) and **fan** (`fan`, "fan"; ventilador, abanico). Chosen for distinct shape and colour seen from above (the Allen key is thin and wood-coloured; the electrical-tape roll and the fan are both black discs). A1 distractor: **electrical tape** (`electrical_tape`, "cinta de aislar"): "la cinta" fits both it and the tape measure. Screwdriver, pliers, wrench and Allen key are now O1 (absent) vocabulary.
+
+Regenerated as LLM drafts (all `draft_needs_native_review`): `saber/lang/command_bank/phase_a.yaml` (183 utterances, T1-R verbs) and `train_paraphrases.yaml`. Updated: lexicon, scene, synthetic policy / camera, interpreters, parser+ACT, gate question ("¿Te refieres al ...?", contractions via `scene.contract`), trials, ODPB, S4 and ACT configs (old ACT configs moved to `configs/train/_to_delete/`), tests.
+
+## 2026-11-19: pause the arm between scripted demos
+
+On the real arm, demos 2 and 3 of `record_demos --teleop scripted` recorded 0 frames: after the return to home the 0.5 s watchdog kept running while the operator placed objects at the prompt, tripped, and stopped the arm. `XArm6.pause()` now sets the arm to the stop state and disarms the watchdog before each prompt; `XArm6.resume()` re-enters servo mode after Enter. Besides fixing the bug, the arm is stopped (not in servo mode) while someone reaches into the cell. Test: `tests/test_teleop_record.py::test_waiting_between_scripted_demos_does_not_trip_watchdog` (verified by reversion: without pause/resume only 1 of 3 demos is recorded).
+
+## 2026-11-19: per-episode random generator for scripted demos
+
+Resuming `t1r_prueba` gave episodes 1 and 2 the same via/final draws that episode 0 had used, because the generator restarted from `--seed`. Each episode now uses `default_rng([seed, episode_index])`. In `meta/scripted_paths.jsonl`, rows with `ended_by: watchdog` are discarded attempts; the last row per episode is the recorded one.
+
+## 2026-11-19: controller joint ranges as software limits; feasible scripted paths
+
+Demo 36 (fan in z6) failed with SDK code -8: J3 = 10.15 deg, above the controller range (J3 max 10.03 deg; the URDF allows 11 deg, so the software clip did not catch it). Cause: an untruncated 2.4-sigma via-point draw 7 cm towards the base. Fixes: `configs/safety/xarm6_minimal.yaml` now uses the controller joint ranges minus 1 deg; `ScriptedReach` truncates the jitter at 1.5 sigma, runs IK over the whole path before moving and redraws the via point if any configuration leaves the limits (fallback: 3 cm above the final point). Episodes 0-34 were recorded with untruncated jitter (their via points are in `scripted_paths.jsonl`). Offline check of episodes 35-62: max J3 5.7 deg, no redraws. Test: `test_scripted_reach_stays_inside_controller_joint_limits`.
+
+## 2026-11-19: SmolVLA fine-tune on Windows (lerobot 0.4.4)
+
+- `--policy.path=lerobot/smolvla_base` fails on Windows: the Hub id becomes `lerobot\\smolvla_base` (HFValidationError). Use a local copy (`models/smolvla_base`, downloaded with `snapshot_download`); `from_pretrained` loads directories directly.
+- `smolvla_base` declares `observation.images.camera1..3`; the dataset has only `observation.images.wrist`. `--rename_map={"observation.images.wrist": "observation.images.camera1"}`; with `empty_cameras: 0` the missing camera2/3 are skipped (`modeling_smolvla.prepare_images`). Verified by reading lerobot 0.4.4 `policies/factory.py`, `pretrained.py`, `smolvla/modeling_smolvla.py`.
+- Dataset: `scripts/convert_dataset.py` turned `data/datasets/t1r` (npz, 4.7 GB) into `data/datasets/t1r_lerobot` (AV1 video, 85 MB) in 509 s on Ian's laptop.
+- 200-step test on the laptop (2026-11-19): batch 8 fits on the RTX 5060 Laptop; 0.25-0.30 s per update, data_s ~0.006 after warm-up; loss 0.127 -> ~0.02. The checkpoint at step 200 was saved, then lerobot failed to create the `checkpoints/last` symlink (WinError 1314: Windows needs Developer Mode for symlinks). Full run: `configs/train/smolvla_xarm6_t1r_en.yaml` (30k steps, batch 8).
+- WinError 1314 again at step 5000 of the full run (Developer Mode not active). `scripts/lerobot_train_win.py` wraps lerobot-train and replaces `update_last_checkpoint`: symlink if allowed, otherwise a directory junction (`mklink /J`). `train_policy.py` uses it on Windows and gained `--resume` (newest numbered checkpoint, `--config_path=.../train_config.json --resume=true`). The 005000 checkpoint (model + training_state) was saved before the crash.
+
+## 2026-11-20: offline G0 indicator, first result (checkpoint 030000)
+
+`scripts/offline_g0.py` on the 12 held-out demos (goal always in z5), 5 samples per instruction, first chunk only. With the "nearest object at chunk end" criterion: E0 30/60, NI 0/60, OTHER named 33/120, OTHER goal 57/120. That criterion is misleading here: the first chunk moves the camera only ~47 mm (median) from home, and z5 is the zone closest to home. Re-scored by progress (largest decrease of x-y distance): E0 0/60, NI 0/60, OTHER named 57/120, OTHER goal 1/120. Reading: the policy never heads to z5 (no object, goal or not, was ever in z5 during training), and on these layouts the instruction picks between the two other objects at about chance. The script now uses progress as the primary criterion. Next: same check on the training split (in-distribution positions) to separate "ignores language" from "does not generalize to z5".
+
+## 2026-11-20: offline G0 indicator on the training split (checkpoint 030000)
+
+51 training demos, 3 samples per instruction, progress criterion: E0 110/153 (0.72), NI 84/153 (0.55), OTHER named 48/306 (0.16), OTHER goal 212/306 (0.69). With another object named, the policy still heads to the demo goal about as often as with the right instruction: it reads the goal from the image and ignores the instruction (risk R1). Cause in the data design: every training layout was recorded once, with a single goal, so the first image alone identifies the goal and language carries no extra information. Fix to evaluate: record each layout once per object (same image, three instructions, three different targets) so only the instruction separates them.
+
+## 2026-11-20: paired demos (Ian)
+
+`record_demos.py --paired TRAIN TEST` (`saber/record/protocol.py::paired_assignments`): every layout is recorded three times in a row, once per object as the goal, objects untouched, so the same first image comes with three instructions and three targets. Held-out = arrangements never used in training (all six zones appear in training), so the test measures language use rather than spatial generalisation. This departs from PROPUESTA 2.3.1 (held-out zones). Planned set: 20 training layouts + 4 test layouts = 72 demos in `data/datasets/t1r_paired`; training config `configs/train/smolvla_xarm6_t1r_paired_en.yaml` (paired demos only, so the old single-goal layouts do not reintroduce the image-to-goal shortcut). Layout id per demo in `extra.layout`. The prompt only asks to rearrange objects when the layout changes.

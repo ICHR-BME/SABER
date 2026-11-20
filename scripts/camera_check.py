@@ -110,6 +110,8 @@ def check(cfg: CameraRigConfig, seconds: float, out_dir: str | None) -> tuple[bo
             ok = False
     if not opened:
         return False, report
+    # Read the negotiated settings while the devices are still open (disconnect() drops the handles).
+    actual = {name: actual_settings(cam) for name, cam in opened.items()}
     sub = CameraRig(opened, max_skew_s=cfg.max_skew_s)
     try:
         m = measure(sub, seconds)
@@ -125,7 +127,7 @@ def check(cfg: CameraRigConfig, seconds: float, out_dir: str | None) -> tuple[bo
             "opened": True,
             "source": v.source,
             "requested": {"width": v.width, "height": v.height, "fps": v.fps},
-            "actual": actual_settings(opened[v.name]),
+            "actual": actual[v.name],
             "distinct_frames": n,
             "measured_fps": round(n / seconds, 2),
             "dropped_frames_est": max(0, int(round(v.fps * seconds)) - n),

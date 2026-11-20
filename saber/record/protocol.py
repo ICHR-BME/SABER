@@ -69,3 +69,56 @@ def balanced_assignments(
                 z, placement, split = per_goal[g][b]
                 out.append(Assignment(len(out), g, str(z), {k: str(v) for k, v in placement.items()}, split))
     return out
+
+
+def paired_assignments(
+    goals: list[str],
+    zones: list[str],
+    n_train_layouts: int,
+    n_test_layouts: int,
+    seed: int = 0,
+) -> list[Assignment]:
+    """Each layout is recorded once per goal: same image, different instruction and target.
+
+    Decision 2026-11-20 (Ian): with one goal per layout the first image identified the goal and the
+    policy learned to ignore the instruction (offline check, checkpoint 030000). Here every layout
+    appears with every object as the goal, so only the instruction separates the demos.
+
+    * All zones are used in training; ``train`` layouts are balanced so each (object, zone) pair
+      appears about equally often.
+    * ``heldout`` layouts are object->zone combinations never used in training (new arrangements,
+      not new zones): the test measures language use, not spatial generalisation.
+    * Order: layout by layout; inside a layout the three goals are shuffled. Held-out layouts are
+      spread through the session.
+    """
+    from itertools import permutations
+
+    rng = np.random.default_rng(seed)
+    if len(zones) < len(goals):
+        raise ValueError("need at least as many zones as objects")
+    all_layouts = [dict(zip(goals, zs, strict=True)) for zs in permutations(zones, len(goals))]
+    order = rng.permutation(len(all_layouts))
+    candidates = [all_layouts[i] for i in order]
+    if n_train_layouts + n_test_layouts > len(candidates):
+        raise ValueError("not enough distinct layouts")
+    counts: dict[tuple[str, str], int] = {(g, z): 0 for g in goals for z in zones}
+    train: list[dict[str, str]] = []
+    pool = list(candidates)
+    for _ in range(n_train_layouts):  # greedy: keep (object, zone) counts as even as possible
+        best = min(pool, key=lambda lay: sum(counts[(g, z)] for g, z in lay.items()))
+        pool.remove(best)
+        train.append(best)
+        for g, z in best.items():
+            counts[(g, z)] += 1
+    test = pool[:n_test_layouts]
+    tagged = [(lay, "train") for lay in train]
+    for i, lay in enumerate(test):  # spread the held-out layouts through the session
+        pos = int(round((i + 1) * len(tagged) / (n_test_layouts + 1)))
+        tagged.insert(pos, (lay, "heldout"))
+    out: list[Assignment] = []
+    for li, (lay, split) in enumerate(tagged):
+        gs = list(goals)
+        rng.shuffle(gs)
+        for g in gs:
+            out.append(Assignment(len(out), g, lay[g], dict(lay), split, {"layout": li}))
+    return out

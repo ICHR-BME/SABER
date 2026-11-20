@@ -29,6 +29,11 @@ def _backend_for(source: int | str) -> int:
     return cv2.CAP_ANY
 
 
+def _fourcc_str(code: float) -> str:
+    c = int(code)
+    return "".join(chr((c >> (8 * i)) & 0xFF) for i in range(4)) if c > 0 else ""
+
+
 class OpenCVCamera:
     def __init__(self, cfg: CameraViewConfig, read_timeout_s: float = 1.0):
         self.cfg = cfg
@@ -48,6 +53,8 @@ class OpenCVCamera:
         if not cap.isOpened():
             raise RuntimeError(f"camera {self.name!r}: cannot open source {src!r}")
         if not (isinstance(src, str) and "://" in src):
+            if self.cfg.fourcc:  # must be set before the resolution on most Windows/MSMF devices
+                cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*self.cfg.fourcc))
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.cfg.width)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cfg.height)
             cap.set(cv2.CAP_PROP_FPS, self.cfg.fps)
@@ -62,6 +69,7 @@ class OpenCVCamera:
             "width": self._cap.get(cv2.CAP_PROP_FRAME_WIDTH),
             "height": self._cap.get(cv2.CAP_PROP_FRAME_HEIGHT),
             "fps": self._cap.get(cv2.CAP_PROP_FPS),
+            "fourcc": _fourcc_str(self._cap.get(cv2.CAP_PROP_FOURCC)),
         }
 
     def _loop(self) -> None:

@@ -49,7 +49,7 @@ Repositorio: `github.com/ICHR-BME/SABER` (licencia MIT).
 | 7 | Sede final: IROS o CASE | PM | Formato del artículo |
 | 8 | Quiénes son los dos hablantes nativos que revisan el banco de comandos y anotan videos | Equipo | Condiciones S2, S3 y anotación ciega |
 | 9 | Fecha de Expoingenierías y qué se muestra | Equipo | Demo D5 |
-| 10 | ~~IP del controlador~~ **resuelta (5 nov 2026): `192.168.1.203`, máscara `255.255.255.0`**. Sigue abierta: resolución/frecuencia de las cámaras fijas de la celda | Laboratorio | Configuración de cámaras |
+| 10 | ~~IP del controlador~~ **resuelta (5 nov 2026): `192.168.1.226` (actualizada 19 nov 2026; antes `192.168.1.203`), máscara `255.255.255.0`**. Sigue abierta: resolución/frecuencia de las cámaras fijas de la celda | Laboratorio | Configuración de cámaras |
 
 ## 5. Estado del software
 
@@ -62,7 +62,7 @@ Al 3 de noviembre el repositorio solo contenía `LICENSE`. El speedrun de Claude
 | Esqueleto, CI, `CLAUDE.md` | hecho | `pyproject.toml`, `uv.lock`, `.github/workflows/ci.yml`, `CLAUDE.md` | `uv sync && uv run pytest` (5 nov: 108 pasan, 5 se saltan sin extras; con `--extra robot`, 110 pasan y 3 se saltan) |
 | Límites mínimos (recorte de acciones, paro) | hecho | `saber/safety/limits.py`, `configs/safety/xarm6_minimal.yaml` | `tests/test_safety_cameras.py` |
 | Driver xArm 6 + `MockXArm` | parcial: probado contra un SDK simulado con los mismos nombres de función; falta probar en el brazo | `saber/robots/xarm6/driver.py`, `mock.py`, `lerobot_compat.py`, `scripts/xarm_check.py` | `tests/test_xarm6.py` |
-| Sondeo de solo lectura (IP confirmada `192.168.1.203`) | parcial: getters verificados en el código del SDK 1.18.4; bloquea el `clean_warn` implícito del SDK y el ajuste de baudios de la pinza; probado con un SDK falso cuyos setters fallan; **sin correr en el brazo** | `saber/robots/xarm6/probe.py`, `saber/session.py`, `scripts/xarm_check.py` (sin `--i-am-supervising`) | `tests/test_probe.py` |
+| Sondeo de solo lectura (IP confirmada `192.168.1.226` (actualizada 19 nov 2026; antes `192.168.1.203`)) | parcial: getters verificados en el código del SDK 1.18.4; bloquea el `clean_warn` implícito del SDK y el ajuste de baudios de la pinza; probado con un SDK falso cuyos setters fallan; **sin correr en el brazo** | `saber/robots/xarm6/probe.py`, `saber/session.py`, `scripts/xarm_check.py` (sin `--i-am-supervising`) | `tests/test_probe.py` |
 | Revisión de red (`net_check`) | parcial: probado con interfaces y sockets falsos y en la laptop sin el brazo | `scripts/net_check.py` | `tests/test_net_check.py` |
 | Medición de la celda (`measure_cell`) | parcial: probado con un SDK falso que reproduce poses; propone la caja del TCP, nunca escribe en `configs/` | `scripts/measure_cell.py` | `tests/test_measure_cell.py` |
 | Revisión de cámaras (`camera_check`) | parcial: probado con cámaras sintéticas y un `VideoCapture` falso; sin cámaras reales | `scripts/camera_check.py` | `tests/test_camera_check.py` |

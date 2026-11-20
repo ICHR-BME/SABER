@@ -2,24 +2,26 @@
 # real driver will connect (see docs/SAFETY.md). Do not copy values from the internet.
 
 robot:
-  ip: "192.168.1.203"           # confirmed by the team 2026-11-05; netmask 255.255.255.0
-  control_hz: 30                # servo loop rate used for recording and policies
+  ip: "192.168.1.226"           # confirmed by Ian 2026-11-19 (was .203 on 2026-11-05); netmask 255.255.255.0
+  control_hz: 15                # servo loop rate used for recording and policies. 2026-11-19 (Ian): 15 Hz, the wrist camera only gave ~19 fps at 30
   gripper:
-    installed: true             # confirm the xArm Gripper exists (HANDOFF open decision 2)
+    installed: false            # 2026-11-19 (Ian): no gripper; a camera is mounted on the flange
     # xArm Gripper position units as used by XArmAPI.set_gripper_position. Confirm on the real
     # gripper; normalized command 0 = open -> open_pos, 1 = closed -> closed_pos.
     open_pos: null
     closed_pos: null
     speed: null                 # r/min, as in set_gripper_position(speed=...)
-  tcp_offset_m: [0.0, 0.0, 0.172]   # official xArm Gripper TCP (xarm_ros2); change if the tool differs
-  home_deg: null                # safe home joint configuration measured in the cell
+  tcp_offset_m: [0.0567, 0.0, 0.0]  # 2026-11-19 (Ian, photos): lens centre 56.7 mm off the flange axis along flange +x, lens face ~flush with the flange face (z~0); lens looks along flange +z (out of the flange). Translation only.
+  home_deg: [-2.0, -45.4, -36.1, 1.7, 79.8, -0.5]  # measured 2026-11-19 (outputs/cell_measurements_2026-11-19.yaml); TCP z 437.9 mm
 
 controller_safety:              # applied once at connect time through the SDK
-  collision_sensitivity: null   # 0..5 (SDK set_collision_sensitivity); choose with the lab
-  reduced_max_tcp_speed_mm_s: null
+  collision_sensitivity: 3      # 0..5; value already set on the controller (probe 2026-11-19), kept
+  reduced_max_tcp_speed_mm_s: 50   # 2026-11-19 (Ian): first motion tests
   # [x_max, x_min, y_max, y_min, z_max, z_min] in mm, base frame. Must exclude the table and the
   # wrist camera from reach. Measure in the cell.
-  tcp_boundary_mm: null
+  # 2026-11-19: x/y = extremes of the measured boundary points; z_max = home (437.9) + 100 mm (Ian);
+  # z_min = 75 mm, ~20 mm below the T1-R final camera height (95.1 mm), well above the table point (25.9).
+  tcp_boundary_mm: [618.9, 199.6, 217.8, -243.2, 537.9, 75.0]
   enable_fence_mode: true       # set_fence_mode(True): enforce the boundary
 
 software_limits: configs/safety/xarm6_minimal.yaml

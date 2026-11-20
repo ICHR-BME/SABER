@@ -110,6 +110,8 @@ def main(argv: list[str] | None = None, sdk_factory: Callable[[str], Any] | None
             print("WARNING:", msg)
         print(f"moving joint {args.joint} by {args.degrees} deg and back, slowly")
         j = args.joint - 1
+        q_start = robot.joint_positions()
+        peak = 0.0
         for direction in (+1, -1):
             start = robot.joint_positions()
             goal = start.copy()
@@ -119,7 +121,17 @@ def main(argv: list[str] | None = None, sdk_factory: Callable[[str], Any] | None
                 tgt = start + (goal - start) * k / steps
                 robot.send_action(array_to_action(tgt, g))
                 time.sleep(1.0 / robot.config.control_hz)
+            if direction > 0:
+                time.sleep(0.3)
+                peak = float(np.rad2deg(robot.joint_positions()[j] - q_start[j]))
         print("final joints (deg):", np.round(np.rad2deg(robot.joint_positions()), 2).tolist())
+        print(
+            f"measured displacement of joint {args.joint} at the turn: {peak:+.2f} deg (commanded {args.degrees:+.2f})"
+        )
+        if abs(peak) < 0.5 * abs(args.degrees):
+            print("FAIL: the joint did not move as commanded (check mode/state in UFactory Studio)")
+            return 1
+        print("OK: the joint moved and came back")
         return 0
     finally:
         robot.disconnect()

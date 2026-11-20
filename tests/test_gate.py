@@ -13,7 +13,7 @@ from saber.policies.synthetic import SyntheticPolicy
 from saber.robots.xarm6.mock import MockXArm
 from saber.scene import SceneLayout, canonical_instruction
 
-PLACEMENT = {"screwdriver": "z1", "pliers": "z3", "wrench": "z4"}
+PLACEMENT = {"stepper_motor": "z1", "tape_measure": "z3", "fan": "z4"}
 
 
 @pytest.fixture
@@ -57,27 +57,30 @@ def test_img_none_mass():
 def test_gate_executes_when_candidates_agree(setup, rng):
     robot, pol, gate, pos = setup
     cands = [
-        Candidate(canonical_instruction("wrench"), 0.6),
-        Candidate("Grab the wrench and drop it in the tray", 0.4),
+        Candidate(canonical_instruction("fan"), 0.6),
+        Candidate("Go over the fan", 0.4),
     ]
     d = gate.decide(cands, robot.get_observation(), pol, rng)
     assert d.execute and d.scores["m_star"] == pytest.approx(1.0)
-    assert d.info["chosen"]["target"] == "wrench" and d.chunk.shape == (20, 7)
+    assert d.info["chosen"]["target"] == "fan" and d.chunk.shape == (20, 7)
 
 
 def test_gate_abstains_and_asks_when_candidates_disagree(setup, rng):
     robot, pol, gate, pos = setup
-    cands = [Candidate(canonical_instruction("pliers"), 0.5), Candidate(canonical_instruction("wrench"), 0.5)]
+    cands = [
+        Candidate(canonical_instruction("tape_measure"), 0.5),
+        Candidate(canonical_instruction("fan"), 0.5),
+    ]
     d = gate.decide(cands, robot.get_observation(), pol, rng)
     assert not d.execute and d.chunk is None
     assert d.scores["m_star"] == pytest.approx(0.5) and d.scores["R"] > 10
-    assert "las pinzas" in d.question and "la llave" in d.question and d.question.startswith("¿Te refieres")
+    assert d.question == "¿Te refieres al flexómetro o al ventilador?"
 
 
 def test_gate_absent_object(setup, rng):
     robot, pol, gate, _ = setup
     d = gate.decide(
-        [Candidate(NONE_INSTRUCTION, 0.9), Candidate(canonical_instruction("wrench"), 0.1)],
+        [Candidate(NONE_INSTRUCTION, 0.9), Candidate(canonical_instruction("fan"), 0.1)],
         robot.get_observation(),
         pol,
         rng,
@@ -88,17 +91,17 @@ def test_gate_absent_object(setup, rng):
 def test_gate_executes_majority_with_high_weight(setup, rng):
     robot, pol, gate, _ = setup
     cands = [
-        Candidate(canonical_instruction("screwdriver"), 0.9),
-        Candidate(canonical_instruction("wrench"), 0.1),
+        Candidate(canonical_instruction("stepper_motor"), 0.9),
+        Candidate(canonical_instruction("fan"), 0.1),
     ]
     d = gate.decide(cands, robot.get_observation(), pol, rng)
-    assert d.execute and d.info["chosen"]["target"] == "screwdriver"
-    assert d.instruction == canonical_instruction("screwdriver")
+    assert d.execute and d.info["chosen"]["target"] == "stepper_motor"
+    assert d.instruction == canonical_instruction("stepper_motor")
 
 
 def test_features_shape(setup, rng):
     robot, pol, _, _ = setup
-    ch = pol.sample_chunks(robot.get_observation(), canonical_instruction("pliers"), 3, rng).chunks
+    ch = pol.sample_chunks(robot.get_observation(), canonical_instruction("tape_measure"), 3, rng).chunks
     f = chunk_features(ch, robot.config.tcp_offset_m, [5, -1])
     assert f.shape == (3, 7)
     with pytest.raises(ValueError):
@@ -106,14 +109,16 @@ def test_features_shape(setup, rng):
 
 
 def test_baselines():
-    same = [Candidate("pick up the wrench", 0.5), Candidate("pick up the wrench", 0.5)]
-    diff = [Candidate("pick up the wrench", 0.5), Candidate("toma las pinzas de la mesa", 0.5)]
+    same = [Candidate("move to the fan", 0.5), Candidate("move to the fan", 0.5)]
+    diff = [Candidate("move to the fan", 0.5), Candidate("ve al flexómetro de la mesa", 0.5)]
     assert g_text(same) == pytest.approx(1.0) and g_text(diff) < 0.5
     assert g_text(same[:1]) == 1.0
     assert g_conf(0.9, -0.1) > g_conf(0.3, -0.1)
-    ood = GOod([canonical_instruction(o) for o in ("screwdriver", "pliers", "wrench")])
-    assert ood.score(canonical_instruction("wrench")) == pytest.approx(0.0, abs=1e-9)
-    assert ood.score("Pásame el desarmador") < ood.score("Pick up the wrench and put it in a tray")
+    ood = GOod([canonical_instruction(o) for o in ("stepper_motor", "tape_measure", "fan")])
+    assert ood.score(canonical_instruction("fan")) == pytest.approx(0.0, abs=1e-9)
+    assert ood.score("Pásame el motor a pasos") < ood.score(
+        "Please move the arm over to the fan near the tray"
+    )
     rng = np.random.default_rng(1)
     tight = rng.normal(0, 0.002, (8, 4))
     two = np.concatenate([tight[:4], tight[4:] + 0.3])
@@ -196,9 +201,9 @@ def test_run_live_s2_mock(tmp_path):
                 "--system",
                 "S2",
                 "--text",
-                "Pásame las pinzas",
+                "Pásame la cinta",
                 "--extra-visible",
-                "precision_pliers",
+                "electrical_tape",
                 "--max-steps",
                 "30",
                 "--log",

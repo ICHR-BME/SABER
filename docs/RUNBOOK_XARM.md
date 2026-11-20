@@ -4,7 +4,7 @@ Para integrantes del equipo que no escribieron el código. Lee antes `docs/SAFET
 comandos se corren desde la raíz del repositorio en la laptop. Nada de lo que aparece aquí se ha
 probado todavía contra el brazo real: los scripts se probaron solo con SDKs simulados.
 
-Datos conocidos de la celda (5 nov 2026): controlador en `192.168.1.203`, máscara `255.255.255.0`.
+Datos conocidos de la celda (5 nov 2026): controlador en `192.168.1.226`, máscara `255.255.255.0`.
 **Todo lo demás está sin medir** (pinza, sensibilidad de colisión, velocidad reducida, caja del TCP,
 pose de casa, cámaras, zonas). No lo llenes con valores "típicos".
 
@@ -47,7 +47,7 @@ Nadie dentro del espacio de trabajo mientras haya motores habilitados.
    ejemplo Cloudflare WARP) durante la sesión.
 5. **Firewall de Windows:** el SDK solo abre conexiones de salida (TCP 502 y 30002), que Windows
    permite por defecto. Si un antivirus o suite de seguridad las bloquea, agrega una excepción.
-6. Probar: `ping 192.168.1.203`.
+6. Probar: `ping 192.168.1.226`.
 
 ## 3. Escalera de pruebas
 
@@ -215,7 +215,7 @@ Copia esta plantilla a `outputs/sessions/<fecha>/bitacora.md` y llénala durante
 
 ## 5. Problemas comunes
 
-- **`ping 192.168.1.203` falla:** revisa el cable y que el controlador esté encendido; que el
+- **`ping 192.168.1.226` falla:** revisa el cable y que el controlador esté encendido; que el
   adaptador Ethernet tenga la IP fija en `192.168.1.x/24`; que el Wi-Fi no esté también en
   `192.168.1.x` (`net_check.py` lo detecta); apaga VPNs.
 - **Ping funciona pero los puertos 502/30002 están cerrados:** el controlador puede estar

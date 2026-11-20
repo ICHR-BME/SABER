@@ -1,8 +1,11 @@
 # Minimal software limits (saber/safety/limits.py). Joint ranges must lie inside the official
 # URDF limits; leaving them null uses the URDF limits. Narrow them for the cell after measuring.
-joint_lower_deg: null
-joint_upper_deg: null
-max_step_deg: 2.0          # per control step (at 30 Hz this caps joint speed at 60 deg/s)
+# 2026-11-19: the controller's joint ranges (probe: J2 -117.06..116.02, J3 -219.04..10.03, J5 -97..180)
+# are narrower than the URDF (J3 up to 11 deg); the SDK refused J3 = 10.15 deg (code -8). Use the
+# controller ranges minus 1 deg.
+joint_lower_deg: [-360.0, -116.06, -218.04, -360.0, -96.0, -360.0]
+joint_upper_deg: [360.0, 115.02, 9.03, 360.0, 179.0, 360.0]
+max_step_deg: 2.0          # per control step (at 15 Hz this caps joint speed at 30 deg/s)
 gripper_min: 0.0
 gripper_max: 1.0
 watchdog_timeout_s: 0.5    # stop the arm if no new action arrives within this time

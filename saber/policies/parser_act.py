@@ -15,7 +15,7 @@ import numpy as np
 
 from saber.lang.lexicon import mentioned_objects
 from saber.policies.base import ChunkPolicy
-from saber.scene import PHASE_A_OBJECTS, spanish_name
+from saber.scene import PHASE_A_OBJECTS, contract, spanish_name
 
 
 @dataclass
@@ -32,8 +32,10 @@ def parse(utterance: str, visible_objects: list[str] | None = None) -> ParseResu
     q: str | None = None
     obj: str | None = None
     if len(objs) == 1 and objs[0] in PHASE_A_OBJECTS and objs[0] in visible:
-        if objs[0] == "pliers" and "precision_pliers" in visible:
-            q = f"¿Te refieres a {spanish_name('pliers')} o a {spanish_name('precision_pliers')}?"
+        if objs[0] == "tape_measure" and "electrical_tape" in visible:
+            q = contract(
+                f"¿Te refieres a {spanish_name('tape_measure')} o a {spanish_name('electrical_tape')}?"
+            )
         else:
             obj = objs[0]
     elif len(objs) > 1:

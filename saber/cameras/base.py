@@ -37,6 +37,7 @@ class CameraViewConfig:
     width: int
     height: int
     fps: int
+    fourcc: str | None = None  # e.g. "MJPG": many USB webcams only reach 30 fps at 640x480 in MJPG
 
 
 @dataclass
@@ -54,7 +55,12 @@ class CameraRigConfig:
     def from_dict(cls, raw: dict) -> CameraRigConfig:
         views = [
             CameraViewConfig(
-                name=k, source=v["source"], width=int(v["width"]), height=int(v["height"]), fps=int(v["fps"])
+                name=k,
+                source=v["source"],
+                width=int(v["width"]),
+                height=int(v["height"]),
+                fps=int(v["fps"]),
+                fourcc=v.get("fourcc"),
             )
             for k, v in (raw.get("views") or {}).items()
         ]

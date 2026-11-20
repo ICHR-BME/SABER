@@ -32,7 +32,7 @@ import numpy as np
 from saber.gate.features import chunk_features, end_positions
 from saber.lang.interpreter import NONE_INSTRUCTION, Candidate
 from saber.live import GateDecision
-from saber.scene import nearest_object, spanish_name
+from saber.scene import contract, nearest_object, spanish_name
 
 NONE_GROUP = -1
 
@@ -210,9 +210,9 @@ class IMGGate:
             if len(names) == 2:
                 break
         if len(names) == 2:
-            return f"¿Te refieres a {spanish_name(names[0])} o a {spanish_name(names[1])}?"
+            return contract(f"¿Te refieres a {spanish_name(names[0])} o a {spanish_name(names[1])}?")
         if len(names) == 1:
-            return f"¿Quieres que tome {spanish_name(names[0])}?"
+            return contract(f"¿Quieres que vaya a {spanish_name(names[0])}?")
         return "¿Qué objeto quieres que tome?"
 
     def decide(

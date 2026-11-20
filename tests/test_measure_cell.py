@@ -60,8 +60,22 @@ def test_measure_cell_end_to_end(tmp_path, capsys):
     sdk = ReplaySDK(poses, gripper=[850.0, 12.0])
     answers = iter([""] * len(DEFAULT_LABELS) + ["boundary_extra", "", ""])
     out = tmp_path / "cell.yaml"
+    # The cell config now says no gripper (2026-11-19); this test exercises the gripper labels.
+    cfg_doc = yaml.safe_load(open("configs/robot/xarm6_cell.yaml", encoding="utf-8"))
+    cfg_doc["robot"]["gripper"]["installed"] = True
+    cfg_path = tmp_path / "robot_with_gripper.yaml"
+    cfg_path.write_text(yaml.safe_dump(cfg_doc), encoding="utf-8")
     rc = main(
-        ["--measured-by", "SYNTHETIC tester", "--out", str(out), "--margin-mm", "5"],
+        [
+            "--measured-by",
+            "SYNTHETIC tester",
+            "--out",
+            str(out),
+            "--margin-mm",
+            "5",
+            "--config",
+            str(cfg_path),
+        ],
         sdk_factory=lambda ip: sdk,
         input_fn=lambda prompt: next(answers),
         today=dt.date(2026, 11, 5),

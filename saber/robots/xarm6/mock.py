@@ -249,7 +249,9 @@ def mock_config(cameras: CameraRigConfig | None = None, limits: SafetyLimits | N
         home_deg=list(MOCK_START_DEG),
         controller_safety=ControllerSafety(
             collision_sensitivity=3,
-            reduced_max_tcp_speed_mm_s=100.0,
+            # None: the mock does not enforce a TCP speed, so the TCP-step cap in send_action is off
+            # and tests see the joint-space limits alone (tests/test_safety_cameras.py covers the cap).
+            reduced_max_tcp_speed_mm_s=None,
             tcp_boundary_mm=[750.0, -100.0, 600.0, -600.0, 700.0, -5.0],
             enable_fence_mode=True,
         ),

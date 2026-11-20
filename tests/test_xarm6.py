@@ -41,23 +41,24 @@ def test_ik_roundtrip():
 
 def test_real_driver_refuses_unmeasured_config():
     cfg = XArm6Config.from_yaml("configs/robot/xarm6_cell.yaml")
-    # The IP is confirmed (2026-11-05); every other cell value is still unmeasured.
-    assert cfg.ip == "192.168.1.203"
-    assert "robot.ip" not in cfg.missing_for_real_robot()
-    for field in (
-        "robot.gripper.open_pos/closed_pos",
-        "controller_safety.collision_sensitivity",
-        "controller_safety.reduced_max_tcp_speed_mm_s",
-        "controller_safety.tcp_boundary_mm",
-    ):
-        assert field in cfg.missing_for_real_robot()
+    # 2026-11-19: every value the driver needs is now set in the cell config; check that the driver
+    # still refuses when one of them is missing.
+    assert cfg.ip == "192.168.1.226"
+    assert not cfg.gripper.installed
+    assert cfg.missing_for_real_robot() == []
+    cfg.controller_safety.reduced_max_tcp_speed_mm_s = None
+    assert cfg.missing_for_real_robot() == ["controller_safety.reduced_max_tcp_speed_mm_s"]
     robot = XArm6(cfg, sdk_factory=lambda ip: pytest.fail("must not reach the SDK"))
     with pytest.raises(XArmError, match="unmeasured"):
         robot.connect()
 
 
 def test_connect_configures_controller_safety():
-    robot = MockXArm()
+    from saber.robots.xarm6.mock import mock_config
+
+    cfg = mock_config()
+    cfg.controller_safety.reduced_max_tcp_speed_mm_s = 100.0  # SYNTHETIC
+    robot = MockXArm(cfg)
     robot.connect()
     sdk = robot.sdk
     names = [c[0] for c in sdk.calls]
@@ -76,7 +77,7 @@ def test_connect_configures_controller_safety():
 
 
 def test_observation_and_features():
-    robot = MockXArm(object_positions={"wrench": np.array([0.4, 0.0, 0.02])})
+    robot = MockXArm(object_positions={"fan": np.array([0.4, 0.0, 0.02])})
     robot.connect()
     obs = robot.get_observation()
     assert set(robot.action_features) == set(ACTION_KEYS)
@@ -156,3 +157,30 @@ def test_lerobot_adapter_if_installed():
     r.connect()
     assert set(r.action_features) == set(ACTION_KEYS)
     r.disconnect()
+
+
+def test_check_accepts_list_return_codes():
+    """xarm-python-sdk 1.18.4 set_fence_mode returns [0] on success (seen on the real arm 2026-11-19)."""
+    from saber.robots.xarm6.driver import _check
+
+    _check(0, "int ok")
+    _check([0], "list ok")
+    _check((0, "extra"), "tuple ok")
+    for bad in (1, [9], [], None):
+        with pytest.raises(XArmError):
+            _check(bad, "bad")
+
+
+def test_wait_for_servo_mode_times_out_when_controller_stays_in_position_mode():
+    """Real arm 2026-11-19: report still said mode 0 after set_mode(1); servo targets were ignored."""
+    cfg = XArm6Config.from_yaml("configs/robot/xarm6_cell.yaml")
+    robot = XArm6(cfg, sdk_factory=lambda ip: pytest.fail("not used"))
+
+    class StuckArm:
+        mode = 0
+
+    robot.arm = StuckArm()
+    with pytest.raises(XArmError, match="mode 0"):
+        robot._wait_for_servo_mode(timeout_s=0.1)
+    robot.arm.mode = 1
+    robot._wait_for_servo_mode(timeout_s=0.1)

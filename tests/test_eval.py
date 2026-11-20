@@ -104,7 +104,7 @@ def test_trials_total_pairing_and_blocks(experiments, tmp_path):
     for b in range(3):  # each block contains every cell once
         cells = Counter((t.system, t.condition) for t in trials if t.block == b)
         assert set(cells.values()) == {1}
-    assert all("precision_pliers" in t.placement for t in trials if t.condition == "A1")
+    assert all("electrical_tape" in t.placement for t in trials if t.condition == "A1")
     assert all(t.utterance == "" and t.input_mode == "none" for t in trials if t.condition == "NOINSTR")
     v2 = Counter(t.snr_db for t in trials if t.condition == "V2" and t.system == "S0")
     assert v2 == {10.0: 20, 0.0: 20}

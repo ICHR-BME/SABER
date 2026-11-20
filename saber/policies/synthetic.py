@@ -40,10 +40,10 @@ class SyntheticPolicy:
         self.object_positions = {k: np.asarray(v, float) for k, v in object_positions.items()}
         self.tcp_offset = np.asarray(tcp_offset, float)
         self.known = known_nouns or {
-            "screwdriver": "screwdriver",
-            "precision pliers": "precision_pliers",
-            "pliers": "pliers",
-            "wrench": "wrench",
+            "tape measure": "tape_measure",
+            "electrical tape": "electrical_tape",
+            "stepper motor": "stepper_motor",
+            "fan": "fan",
         }
         self.horizon = horizon
         self.approach = approach_m

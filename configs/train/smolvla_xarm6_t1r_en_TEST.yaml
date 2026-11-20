@@ -1,0 +1,20 @@
+# SHORT TEST RUN on Ian's laptop (RTX 5060, 8 GB): does SmolVLA fit in memory, and how fast is it?
+# Not a model to evaluate. T1-R demos (no gripper), English-only instructions.
+#   uv run --extra lerobot python scripts/train_policy.py configs/train/smolvla_xarm6_t1r_en_TEST.yaml --run
+policy: smolvla
+# Local copy of lerobot/smolvla_base: on Windows, lerobot 0.4.4 turns the Hub id into
+# "lerobot\smolvla_base" and the download fails (HFValidationError). Download it once with:
+#   uv run --extra lerobot python -c "from huggingface_hub import snapshot_download; snapshot_download('lerobot/smolvla_base', local_dir='models/smolvla_base')"
+init_from: models/smolvla_base
+dataset_repo_id: local/saber_t1r
+dataset_root: data/datasets/t1r_lerobot   # from scripts/convert_dataset.py
+steps: 200
+batch_size: 8
+save_freq: 200
+device: cuda
+output_dir: outputs/train/smolvla_t1r_TEST
+# smolvla_base expects observation.images.camera1..3; our only view is the wrist camera.
+extra_args:
+  - '--rename_map={"observation.images.wrist": "observation.images.camera1"}'
+  - "--num_workers=2"
+  - "--log_freq=10"

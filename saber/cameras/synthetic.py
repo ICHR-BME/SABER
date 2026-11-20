@@ -17,10 +17,10 @@ from saber.cameras.base import CameraViewConfig, Frame
 SYNTHETIC = True
 
 OBJECT_COLORS = {
-    "screwdriver": (230, 60, 60),
-    "pliers": (60, 200, 60),
-    "wrench": (60, 90, 230),
-    "precision_pliers": (200, 200, 40),
+    "tape_measure": (40, 110, 140),
+    "stepper_motor": (190, 190, 190),
+    "fan": (30, 30, 30),
+    "electrical_tape": (20, 20, 20),
 }
 
 # World window rendered by the synthetic cameras (metres, base frame): x in [0.1, 0.7], y in [-0.4, 0.4]

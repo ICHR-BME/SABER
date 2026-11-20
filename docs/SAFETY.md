@@ -9,7 +9,7 @@ el sistema como seguro para colaboración.
 
 - [ ] Conocer el procedimiento propio de la celda: ubicación del paro, reinicio, reglas de acceso.
 - [ ] Llenar cada `null` de `configs/robot/xarm6_cell.yaml` con valores **medidos** (la IP del
-      controlador ya está: `192.168.1.203`; se mide con `scripts/measure_cell.py`): posiciones abierta/cerrada de la pinza, sensibilidad de colisión, velocidad TCP
+      controlador ya está: `192.168.1.226`; se mide con `scripts/measure_cell.py`): posiciones abierta/cerrada de la pinza, sensibilidad de colisión, velocidad TCP
       reducida y caja del TCP `[x_max, x_min, y_max, y_min, z_max, z_min]` (mm, marco de la base)
       que mantenga el TCP sobre la mesa y la cámara de muñeca sin choques. El driver no se conecta
       mientras alguno siga en `null`.

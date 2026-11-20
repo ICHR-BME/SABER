@@ -32,7 +32,7 @@ from saber.gate.img import NONE_GROUP, img_scores
 from saber.lang.command_bank import Utterance
 from saber.lang.interpreter import NONE_INSTRUCTION, Interpreter
 from saber.robots.xarm6.driver import ACTION_KEYS
-from saber.scene import canonical_instruction
+from saber.scene import PHASE_A_OBJECTS, canonical_instruction
 
 ODPB_CONDITIONS = ("E0", "E1", "S1", "S2", "S3")
 
@@ -96,7 +96,7 @@ def build_odpb(
     to query for that episode's scene (a real VLA ignores the meta)."""
     cfg = cfg or ODPBConfig()
     rng = rng or np.random.default_rng(0)
-    g_ood = GOod([canonical_instruction(o) for o in ("screwdriver", "pliers", "wrench")])
+    g_ood = GOod([canonical_instruction(o) for o in tuple(PHASE_A_OBJECTS)])
     rows: list[dict[str, Any]] = []
     for meta, ep in episodes:
         pos = {k: np.asarray(v, float) for k, v in meta["object_positions_m"].items()}

@@ -32,9 +32,25 @@ def training_episodes(dataset_root: str | Path, goal: str | None = None) -> list
     return sorted(m["episode_index"] for m in eps)
 
 
+def launcher() -> list[str]:
+    """``lerobot-train``, or on Windows the wrapper that avoids the checkpoint symlink (WinError 1314)."""
+    if sys.platform == "win32":
+        return [sys.executable, str(Path(__file__).with_name("lerobot_train_win.py"))]
+    return ["lerobot-train"]
+
+
+def resume_command(cfg: dict) -> list[str]:
+    """Resume from the newest numbered checkpoint in output_dir (lerobot --resume=true)."""
+    ckpts = sorted(p for p in (Path(cfg["output_dir"]) / "checkpoints").glob("[0-9]*") if p.is_dir())
+    if not ckpts:
+        raise SystemExit(f"no checkpoint to resume in {cfg['output_dir']}/checkpoints")
+    train_cfg = ckpts[-1] / "pretrained_model" / "train_config.json"
+    return [*launcher(), f"--config_path={train_cfg.as_posix()}", "--resume=true"]
+
+
 def build_command(cfg: dict) -> list[str]:
     cmd = [
-        "lerobot-train",
+        *launcher(),
         f"--dataset.repo_id={cfg['dataset_repo_id']}",
         f"--dataset.root={cfg['dataset_root']}",
         f"--batch_size={cfg['batch_size']}",
@@ -46,10 +62,11 @@ def build_command(cfg: dict) -> list[str]:
         "--policy.push_to_hub=false",
         "--wandb.enable=false",
     ]
+    n = len(launcher())
     if cfg.get("init_from"):
-        cmd.insert(1, f"--policy.path={cfg['init_from']}")
+        cmd.insert(n, f"--policy.path={cfg['init_from']}")
     else:
-        cmd.insert(1, f"--policy.type={cfg['policy']}")
+        cmd.insert(n, f"--policy.type={cfg['policy']}")
     eps = training_episodes(cfg["dataset_root"], cfg.get("filter_goal"))
     if eps is not None:
         cmd.append("--dataset.episodes=[" + ",".join(map(str, eps)) + "]")
@@ -70,9 +87,10 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("config")
     ap.add_argument("--run", action="store_true", help="actually launch training (GPU machine only)")
+    ap.add_argument("--resume", action="store_true", help="resume from the newest checkpoint in output_dir")
     args = ap.parse_args(argv)
     cfg = yaml.safe_load(Path(args.config).read_text(encoding="utf-8"))
-    cmd = build_command(cfg)
+    cmd = resume_command(cfg) if args.resume else build_command(cfg)
     print(" ".join(shlex.quote(c) for c in cmd))
     print("estimate:", estimate_hours(cfg))
     if not args.run:

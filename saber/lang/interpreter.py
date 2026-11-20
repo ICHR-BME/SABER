@@ -85,7 +85,7 @@ class RuleInterpreter:
     """Deterministic lexicon interpreter (test backend).
 
     If the utterance names a Phase A object, returns its canonical instruction. If it names
-    "pinzas" and precision pliers are visible, returns both readings with equal weight (A1).
+    "cinta" and the electrical tape are visible, returns both readings with equal weight (A1).
     If it names a known-absent object or nothing, returns NONE.
     """
 
@@ -102,13 +102,13 @@ class RuleInterpreter:
         objs = mentioned_objects(utterance)
         visible = set(visible_objects or PHASE_A_OBJECTS)
         cands: list[Candidate] = []
-        if "precision_pliers" in objs:
-            cands = [Candidate("Pick up the precision pliers and put them in the tray", 1.0, 0.0)]
+        if "electrical_tape" in objs:
+            cands = [Candidate("Move to the electrical tape", 1.0, 0.0)]
         elif len(objs) == 1 and objs[0] in PHASE_A_OBJECTS:
             o = objs[0]
             cands = [Candidate(canonical_instruction(o), 1.0, 0.0)]
-            if o == "pliers" and "precision_pliers" in visible:
-                cands.append(Candidate("Pick up the precision pliers and put them in the tray", 1.0, 0.0))
+            if o == "tape_measure" and "electrical_tape" in visible:
+                cands.append(Candidate("Move to the electrical tape", 1.0, 0.0))
         elif len(objs) > 1:
             cands = [Candidate(canonical_instruction(o), 1.0, 0.0) for o in objs if o in PHASE_A_OBJECTS]
         if not cands:  # nothing (or only a known-absent object) was named
@@ -120,7 +120,7 @@ class RuleInterpreter:
 
 PROMPT = (
     "You convert a robot operator's command (Spanish, Mexican Spanish, Spanglish or English) into "
-    "one English instruction of the form 'Pick up the <object> and put it in the tray'. "
+    "one English instruction of the form 'Move to the <object>'. "
     "Objects on the table: {objects}. If the requested object is not on the table, answer NONE.\n"
     "Command: {utterance}\nInstruction:"
 )

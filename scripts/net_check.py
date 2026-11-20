@@ -1,7 +1,7 @@
 """Network preflight for the xArm 6 controller (standard library only, changes nothing).
 
-    uv run python scripts/net_check.py                 # target 192.168.1.203
-    uv run python scripts/net_check.py --ip 192.168.1.203 --prefix 24
+    uv run python scripts/net_check.py                 # target 192.168.1.226
+    uv run python scripts/net_check.py --ip 192.168.1.226 --prefix 24
 
 Checks:
   1. exactly one local IPv4 interface is in the controller's network (default /24),
@@ -27,7 +27,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-DEFAULT_IP = "192.168.1.203"
+DEFAULT_IP = "192.168.1.226"
 DEFAULT_PREFIX = 24
 TIMEOUT_S = 2.0
 

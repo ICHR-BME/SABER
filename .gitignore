@@ -14,3 +14,4 @@ data/datasets/
 !tests/fixtures/*.wav
 .env
 .DS_Store
+models/

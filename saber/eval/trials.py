@@ -79,7 +79,7 @@ def make_scenes(
     if condition in ("A1", "O1"):
         pool = [u for u in bank if u.condition == condition]
         rng.shuffle(pool)
-        extra = ("precision_pliers",) if condition == "A1" else ()
+        extra = ("electrical_tape",) if condition == "A1" else ()
         pl = _placements(n, zones, rng, extra)
         return [Scene(f"{condition}-{i:03d}", None, p, pool[i % len(pool)]) for i, (_, p) in enumerate(pl)]
     by_goal = {g: [u for u in bank if u.condition == src and u.target == g] for g in PHASE_A_OBJECTS}
