@@ -77,6 +77,8 @@ def paired_assignments(
     n_train_layouts: int,
     n_test_layouts: int,
     seed: int = 0,
+    exclude: list[dict[str, str]] | tuple = (),
+    prior_train: list[dict[str, str]] | tuple = (),
 ) -> list[Assignment]:
     """Each layout is recorded once per goal: same image, different instruction and target.
 
@@ -90,6 +92,10 @@ def paired_assignments(
       not new zones): the test measures language use, not spatial generalisation.
     * Order: layout by layout; inside a layout the three goals are shuffled. Held-out layouts are
       spread through the session.
+    * ``exclude``: layouts already recorded elsewhere (e.g. an earlier paired set); never drawn again,
+      so a second set adds only new arrangements and never reuses an earlier held-out layout.
+      ``prior_train``: training layouts of that earlier set; they seed the (object, zone) counts so
+      the union of both sets stays balanced. Decision 2026-11-20 (second paired set).
     """
     from itertools import permutations
 
@@ -98,10 +104,15 @@ def paired_assignments(
         raise ValueError("need at least as many zones as objects")
     all_layouts = [dict(zip(goals, zs, strict=True)) for zs in permutations(zones, len(goals))]
     order = rng.permutation(len(all_layouts))
-    candidates = [all_layouts[i] for i in order]
+    excluded = [dict(lay) for lay in exclude]
+    candidates = [all_layouts[i] for i in order if all_layouts[i] not in excluded]
     if n_train_layouts + n_test_layouts > len(candidates):
         raise ValueError("not enough distinct layouts")
     counts: dict[tuple[str, str], int] = {(g, z): 0 for g in goals for z in zones}
+    for lay in prior_train:
+        for g, z in lay.items():
+            if (g, z) in counts:
+                counts[(g, z)] += 1
     train: list[dict[str, str]] = []
     pool = list(candidates)
     for _ in range(n_train_layouts):  # greedy: keep (object, zone) counts as even as possible
@@ -121,4 +132,38 @@ def paired_assignments(
         rng.shuffle(gs)
         for g in gs:
             out.append(Assignment(len(out), g, lay[g], dict(lay), split, {"layout": li}))
+    return out
+
+
+def fixed_assignments(
+    goals: list[str],
+    placement: dict[str, str],
+    n_train_repeats: int,
+    n_test_repeats: int,
+    seed: int = 0,
+) -> list[Assignment]:
+    """One fixed layout, every goal once per repeat (decision 2026-11-21, plan B for the Expo).
+
+    The 30-layout xy-first model did not learn to find the objects when they move (5/30 training
+    layouts right), while a model trained on one layout followed the instruction on all samples; so
+    the Expo uses a single layout. Each repeat records the three goals in a shuffled order (same
+    image, different instruction and target). ``extra.layout`` is the repeat index, so the paired
+    tools (merge, offline G0) treat a repeat like a layout. Held-out repeats are spread through
+    the session. The layout itself is not held out: this setting does not test new layouts.
+    """
+    if sorted(placement) != sorted(goals):
+        raise ValueError(f"placement must place exactly {sorted(goals)}")
+    if len(set(placement.values())) != len(placement):
+        raise ValueError("two objects in the same zone")
+    rng = np.random.default_rng(seed)
+    n = n_train_repeats + n_test_repeats
+    test = {round((i + 1) * n / (n_test_repeats + 1)) - 1 for i in range(n_test_repeats)}
+    out: list[Assignment] = []
+    for rep in range(n):
+        split = "heldout" if rep in test else "train"
+        for g in rng.permutation(goals):
+            g = str(g)
+            out.append(
+                Assignment(len(out), g, placement[g], dict(placement), split, {"layout": rep, "fixed": True})
+            )
     return out

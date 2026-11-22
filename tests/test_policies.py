@@ -186,3 +186,31 @@ def test_relabel_dataset(tmp_path):
 def test_smolvla_wrapper_requires_lerobot():
     pytest.importorskip("lerobot")
     pytest.skip("needs a downloaded SmolVLA checkpoint and ideally a GPU")
+
+
+def test_train_policy_only_episodes(tmp_path):
+    """Diagnostic subset runs (2026-11-21): an explicit training-split subset, never held-out episodes."""
+    from scripts.train_policy import build_command
+
+    root = tmp_path / "t1"
+    log = _MetaLog(root)
+    for i, split in enumerate(["train", "train", "heldout", "train"]):
+        log.append(
+            EpisodeMeta(i, "fan", "z1", {}, {}, "op", split, canonical_instruction("fan"), "synthetic", True),
+            10,
+        )
+    cfg = {
+        "policy": "smolvla",
+        "init_from": "models/smolvla_base",
+        "dataset_repo_id": "local/x",
+        "dataset_root": str(root),
+        "steps": 100,
+        "batch_size": 8,
+        "save_freq": 50,
+        "device": "cuda",
+        "output_dir": "outputs/train/x",
+        "only_episodes": [3, 0],
+    }
+    assert "--dataset.episodes=[0,3]" in build_command(cfg)
+    with pytest.raises(SystemExit):
+        build_command({**cfg, "only_episodes": [2]})

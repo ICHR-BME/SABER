@@ -116,3 +116,28 @@ def test_max_episode_seconds(tmp_path):
     argv = ["--mock", "--system", "S0", "--text", TEXT, "--max-episode-s", "0", "--log", str(log)]
     assert main(argv) == 0
     assert read_log(log)[-1]["summary"]["outcome"] == "max_time"
+
+
+def test_empty_instruction_runs_s0(tmp_path):
+    """NI condition: "--text=" passes an empty instruction straight to the policy."""
+    from scripts.run_live import main
+
+    log = tmp_path / "live_SYNTHETIC.jsonl"
+    argv = ["--mock", "--system", "S0", "--text=", "--max-steps", "3", "--log", str(log)]
+    assert main(argv) == 0
+    recs = read_log(log)
+    assert recs[0]["utterance"] == "" and recs[0]["instruction"] == ""
+    assert recs[-1]["summary"]["instruction"] == ""
+
+
+def test_empty_instruction_refused_outside_s0_s3(tmp_path):
+    from scripts.run_live import main
+
+    log = tmp_path / "live_SYNTHETIC.jsonl"
+    assert main(["--mock", "--system", "S1", "--text=", "--log", str(log)]) == 2
+
+
+def test_missing_text_refused(tmp_path):
+    from scripts.run_live import main
+
+    assert main(["--mock", "--system", "S0", "--log", str(tmp_path / "live_SYNTHETIC.jsonl")]) == 2

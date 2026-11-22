@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import time
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
@@ -58,6 +59,17 @@ class LiveConfig:
     visible_objects: list[str] | None = None
     realtime: bool = True
     max_episode_s: float | None = None  # wall-clock cap on one episode
+    # Smoothing between action chunks (2026-11-20, first live SmolVLA runs: the arm jerked at every
+    # replan because inference blocked the loop ~0.34 s and each new chunk started away from the old
+    # one). 0 / 0 keeps the original behaviour.
+    prefetch_steps: int = 0  # start the next decision this many steps before the replan (background)
+    blend_steps: int = 0  # crossfade the first N joint targets of a new chunk with the previous chunk
+
+    def __post_init__(self) -> None:
+        if self.prefetch_steps < 0 or self.blend_steps < 0:
+            raise ValueError("prefetch_steps and blend_steps must be >= 0")
+        if self.prefetch_steps and self.prefetch_steps >= self.replan_every:
+            raise ValueError("prefetch_steps must be smaller than replan_every")
 
 
 def candidates_from(
@@ -153,55 +165,87 @@ class LiveRunner:
         idx = 0
         outcome = "max_steps"
         dry_run = bool(getattr(self.robot, "dry_run", False))
+        pool = ThreadPoolExecutor(max_workers=1) if self.cfg.prefetch_steps > 0 else None
+        pending: tuple[Future, int, float] | None = None  # (decision, step of its observation, t0)
         t_start = time.monotonic()
-        while step < self.cfg.max_steps:
-            if self.cfg.max_episode_s is not None and time.monotonic() - t_start > self.cfg.max_episode_s:
-                outcome = "max_time"
-                break
-            if self.robot.check_watchdog():
-                outcome = "watchdog"
-                break
-            obs = self.robot.get_observation()
-            if chunk is None or idx >= self.cfg.replan_every or idx >= len(chunk):
-                t0 = time.perf_counter()
-                if not grasped:
-                    d = self.decide(obs, utterance, asr_hyps)
-                    decisions += 1
-                    rec = {
-                        "episode": episode_id,
-                        "step": step,
-                        "system": self.cfg.system,
-                        "utterance": utterance,
-                        "asr": [(h.text, round(h.weight, 4)) for h in (asr_hyps or [])],
-                        "execute": d.execute,
-                        "instruction": d.instruction,
-                        "question": d.question,
-                        "scores": d.scores,
-                        "info": d.info,
-                        "decision_latency_s": time.perf_counter() - t0,
-                    }
-                    if d.chunk is not None:
-                        rec["chunk_end_tcp_m"] = tcp_position(d.chunk[-1, :6], self.robot.config.tcp_offset_m)
-                    self._log(rec)
-                    if not d.execute:
-                        outcome = "abstained"
-                        break
-                    chunk, instruction = d.chunk, d.instruction
-                else:
-                    chunk = self.policy.sample_chunks(obs, instruction or "", 1, self.rng).chunks[0]
-                idx = 0
-            t_step = time.perf_counter()
-            q, g = chunk[idx, :6], float(chunk[idx, 6])
-            sent = self.robot.send_action(array_to_action(q, g))
-            if dry_run:
-                self._log({"episode": episode_id, "step": step, "dry_run": True, "would_send": sent})
-            if self.robot.last_clip.any:
-                self._log({"episode": episode_id, "step": step, "clip": asdict(self.robot.last_clip)})
-            grasped = grasped or sent["gripper.pos"] >= self.cfg.gripper_closed
-            idx += 1
-            step += 1
-            if self.cfg.realtime:
-                time.sleep(max(0.0, period - (time.perf_counter() - t_step)))
+        try:
+            while step < self.cfg.max_steps:
+                if self.cfg.max_episode_s is not None and time.monotonic() - t_start > self.cfg.max_episode_s:
+                    outcome = "max_time"
+                    break
+                if self.robot.check_watchdog():
+                    outcome = "watchdog"
+                    break
+                obs = self.robot.get_observation()
+                need = chunk is None or idx >= self.cfg.replan_every or idx >= len(chunk)
+                if (
+                    pool is not None
+                    and pending is None
+                    and not need
+                    and not grasped
+                    and idx >= min(self.cfg.replan_every, len(chunk)) - self.cfg.prefetch_steps
+                ):
+                    # next decision from this observation, computed while the arm keeps moving
+                    pending = (
+                        pool.submit(self.decide, dict(obs), utterance, asr_hyps),
+                        step,
+                        time.perf_counter(),
+                    )
+                if need:
+                    t0 = time.perf_counter()
+                    if not grasped:
+                        lag = 0
+                        if pending is not None:
+                            fut, obs_step, t0 = pending
+                            pending = None
+                            d = fut.result()
+                            lag = step - obs_step  # actions already sent since that observation
+                        else:
+                            d = self.decide(obs, utterance, asr_hyps)
+                        decisions += 1
+                        rec = {
+                            "episode": episode_id,
+                            "step": step,
+                            "system": self.cfg.system,
+                            "utterance": utterance,
+                            "asr": [(h.text, round(h.weight, 4)) for h in (asr_hyps or [])],
+                            "execute": d.execute,
+                            "instruction": d.instruction,
+                            "question": d.question,
+                            "scores": d.scores,
+                            "info": d.info,
+                            "decision_latency_s": time.perf_counter() - t0,
+                            "prefetch_lag_steps": lag,
+                        }
+                        if d.chunk is not None:
+                            rec["chunk_end_tcp_m"] = tcp_position(
+                                d.chunk[-1, :6], self.robot.config.tcp_offset_m
+                            )
+                        self._log(rec)
+                        if not d.execute:
+                            outcome = "abstained"
+                            break
+                        new = d.chunk[min(lag, len(d.chunk) - 1) :]
+                        instruction = d.instruction
+                    else:
+                        new = self.policy.sample_chunks(obs, instruction or "", 1, self.rng).chunks[0]
+                    chunk = blend_chunks(chunk, idx, new, self.cfg.blend_steps)
+                    idx = 0
+                t_step = time.perf_counter()
+                q, g = chunk[idx, :6], float(chunk[idx, 6])
+                sent = self.robot.send_action(array_to_action(q, g))
+                if dry_run:
+                    self._log({"episode": episode_id, "step": step, "dry_run": True, "would_send": sent})
+                if self.robot.last_clip.any:
+                    self._log({"episode": episode_id, "step": step, "clip": asdict(self.robot.last_clip)})
+                grasped = grasped or sent["gripper.pos"] >= self.cfg.gripper_closed
+                idx += 1
+                step += 1
+                if self.cfg.realtime:
+                    time.sleep(max(0.0, period - (time.perf_counter() - t_step)))
+        finally:
+            if pool is not None:
+                pool.shutdown(wait=True, cancel_futures=True)
         summary = {
             "episode": episode_id,
             "outcome": outcome,
@@ -214,6 +258,24 @@ class LiveRunner:
         }
         self._log({"summary": summary})
         return summary
+
+
+def blend_chunks(old: np.ndarray | None, old_idx: int, new: np.ndarray, n: int) -> np.ndarray:
+    """Crossfade the first ``n`` joint targets of ``new`` with the not-yet-executed part of ``old``.
+
+    Weight of the new chunk grows linearly, 1/(n+1) ... n/(n+1); the gripper column follows the new
+    chunk. Returns ``new`` unchanged when there is nothing to blend.
+    """
+    if n <= 0 or old is None:
+        return new
+    rest = old[old_idx:]
+    m = min(n, len(rest), len(new))
+    if m == 0:
+        return new
+    out = np.array(new, dtype=float, copy=True)
+    w = (np.arange(1, m + 1) / (n + 1))[:, None]
+    out[:m, :6] = (1.0 - w) * rest[:m, :6] + w * out[:m, :6]
+    return out
 
 
 def _json_default(o: Any) -> Any:

@@ -1,0 +1,20 @@
+# SmolVLA on ALL paired T1-R demos (first set t1r_paired + second set t1r_paired_b, merged with
+# scripts/merge_npz_datasets.py into t1r_paired_all). English only. Decision 2026-11-20 (second set).
+# Warm start from the first paired run (checkpoint 030000) instead of smolvla_base, to fit the
+# retraining into one evening; 20k steps x batch 8. The first run measured ~4.1 steps/s on the
+# RTX 5060 Laptop GPU, so 20k steps should take roughly 1.4 h (estimate, not measured on this data).
+# Held-out = the 4 held-out layouts of the first set (never in training; the second set excludes them).
+#   uv run --extra lerobot python scripts/train_policy.py configs/train/smolvla_xarm6_t1r_paired_all_en.yaml --run
+policy: smolvla
+init_from: outputs/train/smolvla_t1r_paired_en/checkpoints/030000/pretrained_model
+dataset_repo_id: local/saber_t1r_paired_all
+dataset_root: data/datasets/t1r_paired_all_lerobot
+steps: 20000
+batch_size: 8
+save_freq: 5000
+device: cuda
+output_dir: outputs/train/smolvla_t1r_paired_all_en
+extra_args:
+  - '--rename_map={"observation.images.wrist": "observation.images.camera1"}'
+  - "--num_workers=2"
+  - "--log_freq=100"

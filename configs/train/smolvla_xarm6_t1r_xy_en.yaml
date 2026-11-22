@@ -1,0 +1,21 @@
+# SmolVLA fine-tune on the PAIRED xy-first T1-R demos (decision 2026-11-21): the scripted path first
+# moves sideways at the home height until the camera is above the goal, then descends, so the
+# goal-specific motion is in the first action chunk. English only. Fresh start from smolvla_base
+# (the earlier runs learned the old path). Held-out = the 4 held-out layouts of t1r_xy.
+# Time: 30k steps took ~1.7 h at ~4 steps/s on 2026-11-20 and ~1 s/step on 2026-11-21 (laptop
+# throttled); check the GPU power mode before starting.
+#   uv run --extra lerobot python scripts/train_policy.py configs/train/smolvla_xarm6_t1r_xy_en.yaml --run
+policy: smolvla
+# Local copy of lerobot/smolvla_base (Windows: the Hub id fails, see docs/DECISIONS.md).
+init_from: models/smolvla_base
+dataset_repo_id: local/saber_t1r_xy
+dataset_root: data/datasets/t1r_xy_lerobot
+steps: 30000
+batch_size: 8
+save_freq: 5000
+device: cuda
+output_dir: outputs/train/smolvla_t1r_xy_en
+extra_args:
+  - '--rename_map={"observation.images.wrist": "observation.images.camera1"}'
+  - "--num_workers=2"
+  - "--log_freq=100"

@@ -23,7 +23,7 @@ from pathlib import Path
 import numpy as np
 
 from saber.cameras import build_rig
-from saber.record.protocol import balanced_assignments, paired_assignments
+from saber.record.protocol import balanced_assignments, fixed_assignments, paired_assignments
 from saber.record.recorder import record_episode
 from saber.record.writer import EpisodeMeta, NpzEpisodeWriter, read_episode_meta
 from saber.robots.xarm6.config import XArm6Config
@@ -32,7 +32,9 @@ from saber.robots.xarm6.mock import MockXArm
 from saber.scene import PHASE_A_OBJECTS, SceneLayout, canonical_instruction, spanish_name
 
 
-def make_teleop(kind: str, robot: XArm6, assignment, layout: SceneLayout, rng, gello_cfg: str):
+def make_teleop(
+    kind: str, robot: XArm6, assignment, layout: SceneLayout, rng, gello_cfg: str, path: str = "descend"
+):
     if kind == "scripted":
         from saber.teleop.scripted import ScriptedReach
 
@@ -47,6 +49,8 @@ def make_teleop(kind: str, robot: XArm6, assignment, layout: SceneLayout, rng, g
             rng=rng,
             joint_lower=robot.config.limits.joint_lower,
             joint_upper=robot.config.limits.joint_upper,
+            path=path,
+            via_jitter_m=0.02 if path == "xy_first" else 0.03,
         )
     if kind == "synthetic":
         from saber.teleop.synthetic import ScriptedPickPlace
@@ -66,6 +70,26 @@ def make_teleop(kind: str, robot: XArm6, assignment, layout: SceneLayout, rng, g
 
         return KeyboardTeleop(use_pynput=True)
     raise ValueError(kind)
+
+
+def layouts_in(datasets: list[str]) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    """Distinct layouts (object -> zone) recorded in earlier datasets: (all, training split only)."""
+    used: list[dict[str, str]] = []
+    used_train: list[dict[str, str]] = []
+    for root in datasets:
+        if not (Path(root) / "meta" / "saber_episodes.jsonl").exists():
+            raise SystemExit(f"--exclude-layouts-from: {root}/meta/saber_episodes.jsonl not found")
+        seen: set[tuple] = set()
+        for m in read_episode_meta(root):
+            key = tuple(sorted(m["placement"].items()))
+            if key in seen:
+                continue
+            seen.add(key)
+            if m["placement"] not in used:
+                used.append(dict(m["placement"]))
+            if m["split"] == "train":
+                used_train.append(dict(m["placement"]))
+    return used, used_train
 
 
 def calibrate_gello(robot: XArm6, gello_cfg_path: str) -> None:
@@ -105,6 +129,34 @@ def main(argv: list[str] | None = None) -> int:
         metavar=("TRAIN_LAYOUTS", "TEST_LAYOUTS"),
         help="record every layout once per object (decision 2026-11-20), e.g. --paired 20 4",
     )
+    ap.add_argument(
+        "--fixed-layout",
+        metavar="PLACEMENT",
+        help="one layout for every demo (decision 2026-11-21, Expo), e.g. tape_measure=z6,stepper_motor=z1,fan=z3",
+    )
+    ap.add_argument(
+        "--repeats",
+        nargs=2,
+        type=int,
+        default=[10, 2],
+        metavar=("TRAIN", "TEST"),
+        help="with --fixed-layout: repeats (one demo per object each) for training and held-out",
+    )
+    ap.add_argument(
+        "--path",
+        choices=["descend", "xy_first"],
+        default="descend",
+        help="scripted demos: 'xy_first' moves above the goal at the start height, then descends "
+        "(decision 2026-11-21)",
+    )
+    ap.add_argument(
+        "--exclude-layouts-from",
+        action="append",
+        default=[],
+        metavar="DATASET",
+        help="with --paired: never reuse a layout recorded in DATASET (repeatable); its training layouts "
+        "seed the balance counts, e.g. --exclude-layouts-from data/datasets/t1r_paired",
+    )
     ap.add_argument("--operator", default="unknown")
     ap.add_argument("--out", required=False, default="outputs/demos")
     ap.add_argument("--writer", choices=["npz", "lerobot"], default="npz")
@@ -114,6 +166,27 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--yes", action="store_true", help="do not wait for Enter between episodes")
     ap.add_argument("--i-am-supervising", action="store_true")
     args = ap.parse_args(argv)
+
+    fixed = None
+    if args.fixed_layout:
+        if args.paired or args.exclude_layouts_from:
+            print("--fixed-layout cannot be combined with --paired / --exclude-layouts-from", file=sys.stderr)
+            return 2
+        try:
+            fixed = dict(p.split("=") for p in args.fixed_layout.split(","))
+            fixed_assignments(list(PHASE_A_OBJECTS), fixed, 1, 0)
+        except ValueError as e:
+            print(f"--fixed-layout: {e}", file=sys.stderr)
+            return 2
+    if args.exclude_layouts_from and not args.paired:
+        print("--exclude-layouts-from needs --paired", file=sys.stderr)
+        return 2
+    used, used_train = layouts_in(args.exclude_layouts_from)
+    if used:
+        print(f"excluding {len(used)} layouts already recorded in {', '.join(args.exclude_layouts_from)}")
+    if args.paired and Path(args.out).resolve() in {Path(d).resolve() for d in args.exclude_layouts_from}:
+        print("--out must be a new folder, not one of the --exclude-layouts-from datasets", file=sys.stderr)
+        return 2
 
     layout = SceneLayout.from_yaml(args.scene)
     if args.mock:
@@ -131,6 +204,9 @@ def main(argv: list[str] | None = None) -> int:
         cfg = XArm6Config.from_yaml(args.config)
         robot = XArm6(cfg, cameras=build_rig(cfg.cameras), allow_motion=args.i_am_supervising)
         realtime = True
+    if args.path != "descend" and args.teleop != "scripted":
+        print("--path only applies to --teleop scripted", file=sys.stderr)
+        return 2
     if args.teleop == "scripted" and layout.final_tcp_z_m is None:
         print("refusing: --teleop scripted needs t1r_final_tcp_z_m in the scene config", file=sys.stderr)
         return 2
@@ -145,8 +221,22 @@ def main(argv: list[str] | None = None) -> int:
             calibrate_gello(robot, args.gello_config)
             return 0
         goals = list(PHASE_A_OBJECTS)
-        if args.paired:
-            plan = paired_assignments(goals, list(layout.zones), args.paired[0], args.paired[1], args.seed)
+        if fixed is not None:
+            unknown = set(fixed.values()) - set(layout.zones)
+            if unknown:
+                print(f"--fixed-layout: unknown zones {sorted(unknown)}", file=sys.stderr)
+                return 2
+            plan = fixed_assignments(goals, fixed, args.repeats[0], args.repeats[1], args.seed)
+        elif args.paired:
+            plan = paired_assignments(
+                goals,
+                list(layout.zones),
+                args.paired[0],
+                args.paired[1],
+                args.seed,
+                exclude=used,
+                prior_train=used_train,
+            )
         else:
             plan = balanced_assignments(
                 goals, list(layout.zones), args.n_per_goal, layout.heldout_zones, args.heldout_frac, args.seed
@@ -189,7 +279,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 print(f"  NUEVO ACOMODO: {where}")
             last_layout = a.placement
-            if not args.yes and not (args.paired and same_layout):
+            if not args.yes and not ((args.paired or fixed is not None) and same_layout):
                 ans = input("  Enter para grabar, 's' para saltar, 'x' para terminar: ").strip().lower()
                 if ans == "x":
                     break
@@ -202,7 +292,7 @@ def main(argv: list[str] | None = None) -> int:
                 robot.reset_scene(positions)
             # One generator per episode: resuming an interrupted run must not reuse earlier draws.
             ep_rng = np.random.default_rng([args.seed, a.index])
-            teleop = make_teleop(args.teleop, robot, a, layout, ep_rng, args.gello_config)
+            teleop = make_teleop(args.teleop, robot, a, layout, ep_rng, args.gello_config, path=args.path)
             teleop.connect()
             meta = EpisodeMeta(
                 episode_index=a.index,
@@ -215,7 +305,7 @@ def main(argv: list[str] | None = None) -> int:
                 instruction=canonical_instruction(a.goal),
                 teleop=args.teleop,
                 synthetic=synthetic,
-                extra=dict(a.extra),
+                extra={**a.extra, "path": args.path} if args.teleop == "scripted" else dict(a.extra),
             )
             try:
                 res = record_episode(robot, teleop, writer, meta, args.max_steps, realtime=realtime)

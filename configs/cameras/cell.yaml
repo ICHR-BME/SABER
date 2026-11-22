@@ -8,7 +8,7 @@
 max_skew_s: 0.05     # frames further apart than this are not considered synchronized
 views:
   wrist:
-    source: 0          # 2026-11-19: index 0 on Ian's laptop (index 1 was the built-in webcam). Indices can change: re-check with camera_check snapshots
+    source: 1          # 2026-11-20: switched to index 1 (was 0 on Ian's laptop, where 1 was the built-in webcam). Indices can change: re-check with camera_check snapshots
     width: 640
     height: 480
     fps: 15            # 2026-11-19 (Ian): everything at 15 fps / 15 Hz; at 30 the camera gave ~19 fps

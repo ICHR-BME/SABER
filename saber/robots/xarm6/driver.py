@@ -129,16 +129,22 @@ class XArm6:
                 )
         if not self.config.ip:
             raise XArmError("robot.ip is not set")
-        self.arm = self.sdk_factory(self.config.ip)
-        _check(self.arm.clean_warn(), "clean_warn")
-        _check(self.arm.clean_error(), "clean_error")
-        _check(self.arm.motion_enable(enable=True), "motion_enable")
-        self.configure()
-        if self.config.gripper.installed:
-            _check(self.arm.set_gripper_mode(0), "set_gripper_mode")
-            _check(self.arm.set_gripper_enable(True), "set_gripper_enable")
+        # Cameras first (2026-11-21): a camera that fails to start must not leave the arm enabled.
         if self.cameras is not None:
             self.cameras.connect()
+        try:
+            self.arm = self.sdk_factory(self.config.ip)
+            _check(self.arm.clean_warn(), "clean_warn")
+            _check(self.arm.clean_error(), "clean_error")
+            _check(self.arm.motion_enable(enable=True), "motion_enable")
+            self.configure()
+            if self.config.gripper.installed:
+                _check(self.arm.set_gripper_mode(0), "set_gripper_mode")
+                _check(self.arm.set_gripper_enable(True), "set_gripper_enable")
+        except BaseException:
+            if self.cameras is not None:
+                self.cameras.disconnect()
+            raise
         self.stopped = False
         log.info(
             "xArm 6 connected at %s (motion %s)",

@@ -68,6 +68,12 @@ def build_command(cfg: dict) -> list[str]:
     else:
         cmd.insert(n, f"--policy.type={cfg['policy']}")
     eps = training_episodes(cfg["dataset_root"], cfg.get("filter_goal"))
+    if cfg.get("only_episodes") is not None:
+        # diagnostic runs (2026-11-21): train on an explicit subset of the training split
+        only = sorted(int(e) for e in cfg["only_episodes"])
+        if eps is None or not set(only) <= set(eps):
+            raise SystemExit("only_episodes must be training-split episodes of dataset_root")
+        eps = only
     if eps is not None:
         cmd.append("--dataset.episodes=[" + ",".join(map(str, eps)) + "]")
     elif cfg.get("filter_goal"):

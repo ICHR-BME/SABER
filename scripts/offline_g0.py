@@ -53,6 +53,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--split", default="heldout", choices=["heldout", "train", "all"])
     ap.add_argument("--samples", type=int, default=5, help="flow samples per (demo, instruction)")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--episodes", default=None, help="comma-separated episode indices to keep, e.g. 0,1,2")
     ap.add_argument("--no-share-prefix", action="store_true", help="use predict_action_chunk instead")
     args = ap.parse_args(argv)
 
@@ -60,6 +61,9 @@ def main(argv: list[str] | None = None) -> int:
 
     cfg = XArm6Config.from_yaml("configs/robot/xarm6_cell.yaml")
     metas = [m for m in read_episode_meta(args.dataset) if args.split == "all" or m["split"] == args.split]
+    if args.episodes:
+        keep = {int(e) for e in args.episodes.split(",")}
+        metas = [m for m in metas if m["episode_index"] in keep]
     print(f"{len(metas)} demos ({args.split}); loading {args.checkpoint}")
     t0 = time.time()
     pol = SmolVLAChunkPolicy(args.checkpoint, views=["wrist"], share_prefix=not args.no_share_prefix)

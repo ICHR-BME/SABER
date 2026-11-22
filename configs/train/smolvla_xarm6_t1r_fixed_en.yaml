@@ -1,0 +1,19 @@
+# SmolVLA on the FIXED-layout xy-first demos (decision 2026-11-21, plan B for the Expo): one layout
+# (tape_measure=z1, stepper_motor=z4, fan=z6), 10 training repeats x 3 goals, 2 held-out repeats.
+# English only, fresh start from smolvla_base. A one-layout diagnostic (3 demos, 3000 steps) already
+# followed the instruction on 15/15 samples; 8000 steps x batch 8 is ~10 passes over ~6k frames,
+# ~35 min at ~3.8 steps/s (measured 2026-11-21 on this laptop with the Turbo power plan).
+#   uv run --extra lerobot python scripts/train_policy.py configs/train/smolvla_xarm6_t1r_fixed_en.yaml --run
+policy: smolvla
+init_from: models/smolvla_base
+dataset_repo_id: local/saber_t1r_fixed
+dataset_root: data/datasets/t1r_fixed_lerobot
+steps: 8000
+batch_size: 8
+save_freq: 2000
+device: cuda
+output_dir: outputs/train/smolvla_t1r_fixed_en
+extra_args:
+  - '--rename_map={"observation.images.wrist": "observation.images.camera1"}'
+  - "--num_workers=2"
+  - "--log_freq=100"

@@ -1,0 +1,20 @@
+# DIAGNOSTIC (2026-11-21), not an experimental condition: SmolVLA from smolvla_base on ONE layout of
+# t1r_xy (episodes 0-2: same image, three instructions, three targets). If the instruction reaches
+# the policy, this tiny run should follow it on these three demos (offline_g0 --episodes 0,1,2,
+# E0 and OTHER named near 1). If it does not, the language path of the pipeline is broken.
+# 3000 steps x batch 8 on ~600 frames (~40 passes); ~15 min at ~3.8 steps/s.
+#   uv run --extra lerobot python scripts/train_policy.py configs/train/smolvla_xarm6_t1r_xy_sanity1.yaml --run
+policy: smolvla
+init_from: models/smolvla_base
+dataset_repo_id: local/saber_t1r_xy
+dataset_root: data/datasets/t1r_xy_lerobot
+only_episodes: [0, 1, 2]
+steps: 3000
+batch_size: 8
+save_freq: 3000
+device: cuda
+output_dir: outputs/train/smolvla_t1r_xy_sanity1
+extra_args:
+  - '--rename_map={"observation.images.wrist": "observation.images.camera1"}'
+  - "--num_workers=2"
+  - "--log_freq=100"

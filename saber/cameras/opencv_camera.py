@@ -35,12 +35,17 @@ def _fourcc_str(code: float) -> str:
 
 
 class OpenCVCamera:
-    def __init__(self, cfg: CameraViewConfig, read_timeout_s: float = 1.0):
+    def __init__(
+        self, cfg: CameraViewConfig, read_timeout_s: float = 1.0, first_frame_timeout_s: float = 5.0
+    ):
         self.cfg = cfg
         self.name = cfg.name
         self.width = cfg.width
         self.height = cfg.height
         self.read_timeout_s = read_timeout_s
+        # DirectShow can take over 1 s to deliver the first frame after opening (2026-11-21: run_live
+        # failed with "no frame within 1.0s" on its first observation while camera_check was fine).
+        self.first_frame_timeout_s = first_frame_timeout_s
         self._cap: cv2.VideoCapture | None = None
         self._latest: Frame | None = None
         self._lock = threading.Lock()
@@ -62,6 +67,16 @@ class OpenCVCamera:
         self._stop.clear()
         self._thread = threading.Thread(target=self._loop, name=f"cam-{self.name}", daemon=True)
         self._thread.start()
+        deadline = time.monotonic() + self.first_frame_timeout_s
+        while time.monotonic() < deadline:
+            with self._lock:
+                if self._latest is not None:
+                    return
+            time.sleep(0.01)
+        self.disconnect()
+        raise TimeoutError(
+            f"camera {self.name!r}: opened source {src!r} but no first frame within {self.first_frame_timeout_s}s"
+        )
 
     def actual_settings(self) -> dict[str, float]:
         assert self._cap is not None

@@ -65,7 +65,7 @@ def main(argv: list[str] | None = None, sdk_factory: Callable[[str], Any] | None
     ap.add_argument("--placement", default="tape_measure=z1,stepper_motor=z4,fan=z6")
     ap.add_argument("--mock", action="store_true")
     ap.add_argument("--system", choices=["S0", "S1", "S2", "S3", "S4"], default="S1")
-    ap.add_argument("--text")
+    ap.add_argument("--text", help='instruction; "--text=" (empty) = no instruction (NI, S0/S3 only)')
     ap.add_argument("--audio")
     ap.add_argument("--asr-model", default="large-v3-turbo")
     ap.add_argument("--policy", default="synthetic", help="synthetic | smolvla:<path> | act:<path>")
@@ -74,6 +74,21 @@ def main(argv: list[str] | None = None, sdk_factory: Callable[[str], Any] | None
     ap.add_argument("--gate-config", default="configs/experiments/s2_img.yaml")
     ap.add_argument("--k", type=int, default=3)
     ap.add_argument("--max-steps", type=int, default=600)
+    ap.add_argument(
+        "--replan-every", type=int, default=20, help="steps of each action chunk executed before replanning"
+    )
+    ap.add_argument(
+        "--prefetch-steps",
+        type=int,
+        default=8,
+        help="compute the next chunk this many steps early, in the background (0 = blocking, old behaviour)",
+    )
+    ap.add_argument(
+        "--blend-steps",
+        type=int,
+        default=5,
+        help="crossfade the first N targets of a new chunk with the previous one (0 = jump, old behaviour)",
+    )
     ap.add_argument("--max-episode-s", type=float, default=None, help="wall-clock cap per episode")
     ap.add_argument(
         "--dry-run",
@@ -86,8 +101,11 @@ def main(argv: list[str] | None = None, sdk_factory: Callable[[str], Any] | None
     ap.add_argument("--i-am-supervising", action="store_true")
     args = ap.parse_args(argv)
 
-    if not args.text and not args.audio:
+    if args.text is None and not args.audio:
         print("give --text or --audio", file=sys.stderr)
+        return 2
+    if args.text == "" and args.system not in ("S0", "S3"):
+        print("an empty --text (no instruction) is only meaningful for S0/S3", file=sys.stderr)
         return 2
     layout = SceneLayout.from_yaml(args.scene)
     placement = dict(p.split("=") for p in args.placement.split(","))
@@ -137,7 +155,7 @@ def main(argv: list[str] | None = None, sdk_factory: Callable[[str], Any] | None
 
         asr_hyps = WhisperNBest(args.asr_model).transcribe(args.audio)
         print("ASR n-best:", [(h.text, round(h.weight, 3)) for h in asr_hyps])
-    utterance = args.text or (asr_hyps[0].text if asr_hyps else "")
+    utterance = args.text if args.text is not None else (asr_hyps[0].text if asr_hyps else "")
 
     interpreter = (
         RuleInterpreter() if args.interpreter == "rule" else HFInterpreter(args.interpreter.split(":", 1)[1])
@@ -186,6 +204,9 @@ def main(argv: list[str] | None = None, sdk_factory: Callable[[str], Any] | None
             visible_objects=visible,
             realtime=realtime,
             max_episode_s=args.max_episode_s,
+            replan_every=args.replan_every,
+            prefetch_steps=args.prefetch_steps,
+            blend_steps=args.blend_steps,
         ),
         interpreter,
         gate,

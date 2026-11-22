@@ -6,6 +6,15 @@ down, over the goal zone at the T1-R final height. Images and joint states are r
 motion is scripted. To avoid every demo following the same path, each one gets a random via point
 above the goal and a small random final offset (seeded, recorded in the episode metadata).
 
+Paths (``path``):
+  "descend"   (2026-11-19) straight line from home to a via point 8 cm above the goal, then down.
+              Home is above the middle of the grid, so the first ~3 s are mostly a descent and the
+              demos for different goals differ by only ~4 cm there.
+  "xy_first"  (2026-11-21) first a horizontal move at the starting height until the camera is
+              above the goal (via point, jittered), then straight down. The goal-specific part of
+              the motion comes first, where the instruction has to decide it (first live SmolVLA
+              runs ignored the instruction; see docs/DECISIONS.md).
+
 Paper caveat: scripted demos are less varied than human teleoperation; report it.
 """
 
@@ -38,7 +47,11 @@ class ScriptedReach:
         joint_lower: np.ndarray | None = None,
         joint_upper: np.ndarray | None = None,
         margin_deg: float = 1.0,
+        path: str = "descend",
     ):
+        if path not in ("descend", "xy_first"):
+            raise ValueError(f"unknown path {path!r}")
+        self.path = path
         self.tcp_offset = np.asarray(tcp_offset, dtype=float)
         self.goal_xy = np.asarray(goal_xy, dtype=float)[:2]
         self.final_z = float(final_z)
@@ -63,7 +76,9 @@ class ScriptedReach:
         return np.clip(self.rng.normal(0.0, sigma, 2), -1.5 * sigma, 1.5 * sigma)
 
     def _draw_via(self) -> np.ndarray:
-        return np.array([*(self.goal_xy + self._jitter(self.via_jitter_m)), self.final_z + self.via_height_m])
+        # xy_first: the height is the start height, filled in by _build once the start pose is known
+        z = np.nan if self.path == "xy_first" else self.final_z + self.via_height_m
+        return np.array([*(self.goal_xy + self._jitter(self.via_jitter_m)), z])
 
     def connect(self) -> None:
         pass
@@ -73,6 +88,7 @@ class ScriptedReach:
 
     def describe(self) -> dict[str, Any]:
         return {
+            "path": self.path,
             "via_m": [float(v) for v in self.via],
             "final_m": [float(v) for v in self.final],
             "via_redraws": self.via_redraws,
@@ -106,7 +122,10 @@ class ScriptedReach:
         start = forward_kinematics(q0, self.tcp_offset)[:3, 3]
         for attempt in range(21):
             if attempt == 20:  # fall back to a via point straight above the final point
-                self.via = np.array([*self.final[:2], self.final_z + 0.03])
+                z = start[2] if self.path == "xy_first" else self.final_z + 0.03
+                self.via = np.array([*self.final[:2], z])
+            if self.path == "xy_first":
+                self.via[2] = start[2]
             plan = self._cartesian_plan(start)
             q_plan = self._joint_plan(q0, plan)
             if q_plan is not None:
